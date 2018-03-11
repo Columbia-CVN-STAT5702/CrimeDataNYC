@@ -8,11 +8,18 @@ Data Descripton
   * https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Historic/qgea-i56i
   * API access via SODA API: https://data.cityofnewyork.us/resource/9s4h-37hy.csv
   
-  * This dataset includes all valid felony, misdemeanor, and violation crimes reported to the New York City Police Department (NYPD) from 2006 to the end of last year (2016).
+  * This dataset includes all valid felony, misdemeanor, and violation crimes reported to
+    the New York City Police Department (NYPD) from 2006 to the end of last year (2016). 
+    The dataset is created on Novermber 2, 2016. The update frequency is annually.
   
-  * The dataset is provided by NYPD and owned by NYC OpenData. It has 5.58 Million rows and 24 variables. 3 types of variables included are number, text, and location. The 24 variables are listed below.
+  * The dataset is provided by NYPD and owned by NYC OpenData. It has 5.58 Million rows and 24 variables. 
+    Three types of variables included are number, text, and location. The 24 variables are listed below.
+
+  * Only valid complaints are included in this release. Information is accurate as of the date 
+    it was queried from the system of the record, but should be considered a close approximation of 
+    the current records, due to complaint revisions and updates. (NYPDIncidentLevelDataFootnotes.pdf)
   
-Column,Description
+Column                  Description
 CMPLNT_NUM(number)      Randomly generated persistent ID for each complaint
 CMPLNT_FR_DT(Date&Time) "Exact date of occurrence for the reported event (or starting date of occurrence, if CMPLNT_TO_DT exists)"
 CMPLNT_FR_TM(text)      "Exact time of occurrence for the reported event (or starting time of occurrence, if CMPLNT_TO_TM exists)"
