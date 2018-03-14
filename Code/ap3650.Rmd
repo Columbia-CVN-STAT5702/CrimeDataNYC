@@ -1,0 +1,86 @@
+---
+title: "ap3650_visualization"
+author: "Anita"
+date: "March 13, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r }
+library(data.table)
+library(vcdExtra)
+library(extracat)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+
+#fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->crime_df
+fread("NYPD_Complaint_Data_Historic.csv",na.strings="")->crime_df
+```
+
+## Data Manipulations
+
+
+```{r }
+
+#Convert dates and times to correct format
+crime_df$CMPLNT_FR_DT <- as.Date(crime_df$CMPLNT_FR_DT, format='%m/%d/%Y')
+crime_df$CMPLNT_TO_DT <- as.Date(crime_df$CMPLNT_TO_DT, format='%m/%d/%Y')
+crime_df$RPT_DT <- as.Date(crime_df$RPT_DT, format='%m/%d/%Y')
+
+crime_df$CMPLNT_FR_TM <- as.POSIXct(crime_df$CMPLNT_FR_TM, format='%H:%M:%S')
+crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
+
+```
+## Plots  
+## Warm-up Plot :-) Bar Chart 
+```{r}
+  ggplot(crime_df,aes(LAW_CAT_CD)) +
+    geom_bar() +
+    ggtitle("Distribution of Crime Category")
+```  
+
+## Type of Offense  
+
+```{r fig.height=10, fig.width=8}
+  ggplot(crime_df,aes(PREM_TYP_DESC)) +
+    geom_bar() +
+    facet_wrap(~LAW_CAT_CD) +
+    coord_flip() + 
+    ggtitle("Crime Category Vs Place of Crime")
+  
+
+```
+
+## Month and Time and Type of Crime
+```{r}
+  ggplot(crime_df, aes(LAW_CAT_CD)) +
+  geom_bar() +
+  #facet_wrap(~month(CMPLNT_FR_DT))
+  #facet_wrap(~hour(CMPLNT_FR_TM))
+  facet_grid(month(CMPLNT_FR_DT)~hour(CMPLNT_FR_TM))
+
+```
+
+## Time Series - Trend of Crime Rate 
+```{r}
+
+```
+## length of Crime Vs Type of Crime 
+```{r}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
