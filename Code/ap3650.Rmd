@@ -1,8 +1,10 @@
 ---
-title: "ap3650_visualization"
+title: "ap3650_nyc_crime_data_visualization"
 author: "Anita"
 date: "March 13, 2018"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
