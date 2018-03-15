@@ -3,8 +3,8 @@ title: "ap3650_nyc_crime_data_visualization"
 author: "Anita"
 date: "March 13, 2018"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -14,11 +14,6 @@ knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r }
 library(data.table)
@@ -27,9 +22,11 @@ library(extracat)
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
+library(lubridate)
 
 #fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->crime_df
-fread("NYPD_Complaint_Data_Historic.csv",na.strings="")->crime_df
+#fread("NYPD_Complaint_Data_Historic.csv",na.strings="")->crime_df
+crime_df <- read.csv("NYPD_Complaint_Data_Historic.csv", header=TRUE)
 ```
 
 ## Data Manipulations
@@ -67,7 +64,9 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 ```
 
 ## Month and Time and Type of Crime
-```{r}
+
+```{r fig.height = 10, fig.width=10}
+  crime_df <- crime_df %>% drop_na()
   ggplot(crime_df, aes(LAW_CAT_CD)) +
   geom_bar() +
   #facet_wrap(~month(CMPLNT_FR_DT))
@@ -78,10 +77,32 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 ## Time Series - Trend of Crime Rate 
 ```{r}
+    crime_time <- crime_df %>%
+                    filter(year(CMPLNT_FR_DT)>2005) %>%
+                    group_by(Date=floor_date(CMPLNT_FR_DT, "year"),LAW_CAT_CD) %>%
+                    summarize(count=n())
 
+    ggplot(crime_time, aes(Date,count, color=LAW_CAT_CD))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Category Across year")
+
+    
+    crime_time <- crime_df %>%
+                    filter(year(CMPLNT_FR_DT)>2005) %>%
+                    group_by(Date=floor_date(CMPLNT_FR_DT, "month"),LAW_CAT_CD) %>%
+                    summarize(count=n())
+
+    ggplot(crime_time, aes(Date,count, color=LAW_CAT_CD))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Category Across year - sampled month-wise")
+
+```
+* Shows monthly pattern similar to Jingbo's
+* Year pattern fluctuates 
 ```
 ## length of Crime Vs Type of Crime 
 ```{r}
+
 
 ```
 
