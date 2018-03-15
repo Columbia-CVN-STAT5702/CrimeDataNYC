@@ -99,11 +99,24 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 ```
 * Shows monthly pattern similar to Jingbo's
 * Year pattern fluctuates 
-```
+
+
 ## length of Crime Vs Type of Crime 
-```{r}
-
-
+```{r fig.height =20, fig.width=15}
+  crime_time <- crime_df %>%  drop_na() %>%
+                    filter(year(CMPLNT_FR_DT)>2005) %>%
+                    mutate(delta_time = as.numeric(CMPLNT_TO_DT - CMPLNT_FR_DT)) %>%
+                    group_by(OFNS_DESC, delta_time) %>%
+                    summarize(count=n())
+                
+  ggplot(crime_time,aes(delta_time)) +
+    geom_histogram(na.rm=TRUE) +
+    facet_wrap(~OFNS_DESC, ncol = 4)
+  
 ```
+1. There are some cases where there might be typo on "To Date" especially year might be typo   
+2. Observed larceny( grand and petite have lot of cases )  
+3. There are blank OFfense category
+
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
