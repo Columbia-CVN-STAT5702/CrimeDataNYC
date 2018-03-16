@@ -154,5 +154,20 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
                   
 ```
 
+## To find Top 10 Crime Categories, mosaic plots building blocks
+```{r fig.height=12, fig_width = 10}
+  crime_top <- crime_df %>% drop_na() %>%
+                  filter(OFNS_DESC!="") %>%
+                  group_by(OFNS_DESC) %>%
+                  summarize(count=n())
+
+  ggplot(crime_top, aes(reorder(OFNS_DESC,count), count)) +
+    geom_col() + 
+    coord_flip() +
+    ggtitle(" Top Crime Categories")
+  
+
+```
+
 * I tired indivial Crime Types, the colors were too confusing as lot of categories
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
