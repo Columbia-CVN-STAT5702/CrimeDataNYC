@@ -95,10 +95,21 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
     ggplot(crime_time, aes(Date,count, color=LAW_CAT_CD))+
           geom_line() +
           ggtitle("Trend/Rate of Crimes in Each Category Across year - sampled month-wise")
+    
+    crime_boro <- crime_df %>%
+                      filter(year(CMPLNT_FR_DT)> 2005 & BORO_NM != "") %>%
+                      group_by(Date=floor_date(CMPLNT_FR_DT,"month"),BORO_NM) %>%
+                      summarize(count=n())
+    
+    ggplot(crime_boro,aes(Date,count,color=BORO_NM)) +
+      geom_line() +
+      ggtitle("Crime Trend over Years comparing Boroughs")
 
 ```
 * Shows monthly pattern similar to Jingbo's
 * Year pattern fluctuates 
+* Some NM_BORO are empty
+* Gaps between bororughs reduces towards later years
 
 
 ## length of Crime Vs Type of Crime 
@@ -118,5 +129,30 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 2. Observed larceny( grand and petite have lot of cases )  
 3. There are blank OFfense category
 
+## Atempted Crime vs Type of Crime
+```{r fig.height=12, fig.width=8}
+  crime_stat <- crime_df %>%
+                  filter(CRM_ATPT_CPTD_CD == "ATTEMPTED" & OFNS_DESC !="") %>%
+                  group_by(OFNS_DESC) %>%
+                  summarize(count=n())
+  ggplot(crime_stat,aes(OFNS_DESC,count)) +
+      geom_col() +
+      coord_flip() +
+      ggtitle("Attempted Crime Status for Different Types of crime")
+```
 
+## Attempted Crime Trend 
+```{r}
+  crime_stat <- crime_df %>% drop_na() %>%
+                  filter(CRM_ATPT_CPTD_CD=="ATTEMPTED" & year(CMPLNT_FR_DT)>2005 & LAW_CAT_CD != "") %>%
+                  group_by(Date=floor_date(CMPLNT_FR_DT,"year"),LAW_CAT_CD) %>%
+                  summarize(count=n())
+  ggplot(crime_stat, aes(Date,count,color=LAW_CAT_CD)) +
+    geom_line()
+    
+
+                  
+```
+
+* I tired indivial Crime Types, the colors were too confusing as lot of categories
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
