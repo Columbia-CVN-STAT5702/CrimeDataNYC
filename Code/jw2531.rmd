@@ -1,5 +1,5 @@
 ---
-title: "Final Project"
+title: "=====Part 4===== Main Analysis"
 output: html_document
 ---
 
@@ -9,62 +9,23 @@ knitr::opts_chunk$set(warning = FALSE,
                       cache = TRUE)
 ```
 
-
 ```{r cars}
 #if you have not please install data.table package before run the codes below
 #install.packages(data.table)
-library(data.table)
-#fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->df
-```
-```{r fig.height=6}
-library(vcdExtra)
-library(extracat)
-visna(df,sort="b")
-```
-
-* Now in the missing pattern, the positoning variables are consistent with each other. (X_COORD_CD,Y_COORD_CD,Latitude,Longitude,Lat_lon).
-But the missing in CMPLNT_FR_DT,CMPLNT_FR_TM shows may need further look.
-\
-\
-```{r}
-#Show missing count and percentage, you can uncomment it if you like to see the statistics.
-
-#for (i in 1:24) message(format(colnames(df)[i],justify="right",width=20),"\t",format(sum(is.na(dplyr::select(df,i))),digits=7),"\t",sum(is.na(dplyr::select(df,i)))*100/nrow(df))
-```
-
-```{r}
 library(dplyr)
+library(ggplot2)
+library(forcats)
+library(data.table)
+fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->df
+```
+\
+\
+```{r}
 #picking non-missing CMPLNT_FR_DT and convert to Date and filter only those after "2006-01-01", 5560408 obs.
-df%>%filter(!is.na(CMPLNT_FR_DT))%>%mutate(CMPLNT_FR_DT=as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'))%>%filter(CMPLNT_FR_DT>=as.Date("2006-01-01"))->df_Date
+df%>%select(CMPLNT_FR_DT,LAW_CAT_CD)%>%filter(!is.na(CMPLNT_FR_DT))%>%mutate(CMPLNT_FR_DT=as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'))%>%filter(CMPLNT_FR_DT>=as.Date("2006-01-01"))->df_Date
 ```
 
 ```{r}
-library(ggplot2)
-library(gridExtra)
-#Boxplot of CMPLNT_FR_DT
-#df%>%select(CMPLNT_FR_DT)%>%filter(!is.na(CMPLNT_FR_DT))%>%mutate(CMPLNT_FR_DT=as.numeric(format(as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'),'%Y')))->ts_Year
-colnames(ts_Year)<-c("Year")
-
-#p1<-ggplot(ts_Year, aes(1, Year)) +geom_boxplot() + coord_flip()
-#p2<-ts_Year%>%filter(Year>=2000)%>%ggplot(aes(1,Year))+geom_boxplot() + coord_flip()
-#p3<-ts_Year%>%filter(Year>=2006)%>%ggplot(aes(1,Year))+geom_boxplot() + coord_flip()
-grid.arrange(p1,p2,p3,nrow=3)
-```
-
-```{r}
-#it takes too long to make scatterplots
-#ts_Year%>%filter(Year>=2000)->ts_Year2000
-#ts_Year%>%filter(Year>=2006)->ts_Year2006
-ts_Year2006%>%filter(between(row_number(),1,100))->tmp
-#p4<-plot(ts_Year$Year)
-#p5<-plot(ts_Year2000$Year)
-#p6<-plot(ts_Year2006$Year)
-#grid.arrange(p4,p5,p6,nrow=1)
-ggplot(ts_Year,aes(array(1:length(ts_Year$Year)),Year))+geom_point()
-```
-
-```{r}
-library(ggplot2)
 #time series of daily frequency of 3 crime categories 2006-2016
 df_Date%>%group_by(CMPLNT_FR_DT,LAW_CAT_CD)%>%dplyr::summarise(count=n())%>%ungroup->byDateLaw
 
@@ -76,7 +37,6 @@ ggplot(byDateLaw,aes(CMPLNT_FR_DT,count,color=LAW_CAT_CD))+geom_line()+ggtitle("
 \
 \
 ```{r}
-library(forcats)
 #frequency by month
 df_Date%>%mutate(Month=as.character(month(CMPLNT_FR_DT)))%>%group_by(Month,LAW_CAT_CD)%>%summarise(CntByMon=n())->byDateLaw_mon
 
@@ -120,4 +80,61 @@ byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_fli
 ```
 
 * There is obvious day cycle in the crime occurrence. Early morning has the least crime occurrence while later afternoon has the most crime occurrence.
+\
+\
+```{r fig.height=5,fig.width=5}
+#how the different crime types (OFNS_DESC) associated with different places (a heatmap)
+#first filling the missing OFNS_DESC infered from KY_CD
+df%>%select(KY_CD,OFNS_DESC)%>%group_by(KY_CD)%>%
+  summarise(desc=paste(unique(OFNS_DESC),collapse=","))%>%
+  mutate(KY_CD=as.factor(KY_CD))%>%arrange(desc)->match_code_desc
+
+df%>%
+  select(KY_CD,PREM_TYP_DESC)%>%
+  filter(!is.na(PREM_TYP_DESC))%>%
+  mutate(KY_CD=as.factor(KY_CD))%>%
+  group_by(KY_CD,PREM_TYP_DESC)%>%summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyPREM
+
+#merging to get OFNS_DESC vs PREM_TYP_DESC correspondence
+merge(byKYbyPREM, match_code_desc, by.x='KY_CD', by.y='KY_CD')->byKYbyPREM_match
+
+byKYbyPREM_match%>%group_by(desc)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->desc_desc_cnt
+byKYbyPREM_match%>%group_by(PREM_TYP_DESC)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->PREM_desc_cnt
+
+byKYbyPREM_match%>%ggplot(aes(
+  fct_relevel(as.factor(desc),as.character(desc_desc_cnt$desc[sort(desc_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
+  fct_relevel(as.factor(PREM_TYP_DESC),as.character(PREM_desc_cnt$PREM_TYP_DESC[sort(PREM_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow"),na.value="blue")+
+  scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+
+    geom_tile()+theme(axis.text.x = element_text(size=3,angle = 90, hjust = 1),axis.text.y=element_text(size=4))+ylab("Premises")+xlab("OFNS_DESC")
+```
+\
+\
+* Doesn't seem having association between crime types and premises.
+\
+\
+```{r fig.height=5,fig.width=5}
+#how the different crime types associated with time using heatmap
+df%>%
+  select(KY_CD,CMPLNT_FR_TM)%>%
+  filter(!is.na(CMPLNT_FR_TM))%>%
+  mutate(KY_CD=as.factor(KY_CD))%>%
+  mutate(Hour=as.factor(substr(CMPLNT_FR_TM,1,2)))%>%
+  group_by(KY_CD,Hour)%>%summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyFRTM
+
+#merging to get OFNS_DESC vs CMPLNT_FR_TM correspondence
+merge(byKYbyFRTM, match_code_desc, by.x='KY_CD', by.y='KY_CD')->byKYbyFRTM_match
+
+byKYbyFRTM_match%>%group_by(desc)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->desc2_desc_cnt
+byKYbyFRTM_match%>%group_by(Hour)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->Hour_desc_cnt
+
+byKYbyFRTM_match%>%ggplot(aes(
+  fct_relevel(as.factor(desc),as.character(desc2_desc_cnt$desc[sort(desc2_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
+  Hour,fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow"),na.value="blue")+
+  scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+
+    geom_tile()+theme(axis.text.x = element_text(size=3,angle = 90, hjust = 1),axis.text.y=element_text(size=4))+ylab("Hour")+xlab("OFNS_DESC")
+```
+\
+\
+* Do we see any association between time and certain crime? Do see some high dentity around middle up right area, which is consistent with the barcharting daily cycle.
+\
 \
