@@ -1,0 +1,167 @@
+---
+title: "Rrr2149"
+author: "Rashmi"
+date: "3/14/2018"
+output: html_document
+---
+---
+title: "draft"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = FALSE)
+```
+
+
+
+```{r fig.height=10,fig.width=10}
+library(dplyr)
+library(data.table)
+library(ggmap)
+library(ggplot2)
+
+fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"),nrows = 15000, stringsAsFactors = TRUE)->df
+
+```
+
+
+Basic Data Mnupulation
+
+
+```{r fig.height=10,fig.width=10}
+df$CMPLNT_FR_DT <- as.Date(df$CMPLNT_FR_DT, format='%m/%d/%Y')
+df$crime_year <- year(df$CMPLNT_FR_DT)
+#df$crime_year 
+
+#View(df)
+#levels(factor(df$crime_year))
+#str(df)
+
+
+#Bronx Data
+dfBronx<- filter(df,df$BORO_NM== "BRONX")
+#View(dfBronx)
+
+#Quens Data
+dfQUEENS<- filter(df,df$BORO_NM== "QUEENS")
+#View(dfBronx)
+
+#Manhatten Data
+dfManhattan<- filter(df,df$BORO_NM== "MANHATTAN")
+#Brooklyn Data
+dfBrooklyn<- filter(df,df$BORO_NM== "BROOKLYN")
+
+#STATEN ISLAND Data
+dfSTIsland<- filter(df,df$BORO_NM== "STATEN ISLAND")
+#View(dfBronx)
+
+NewYork <- get_map(location = "new york city",  color = "bw",
+                zoom = 11, maptype = "toner", source = "google")
+
+```
+
+Genral NYC Map
+```{r fig.height=10,fig.width=10}
+set.seed(12)
+ggmap(NewYork) 
+
+```
+
+
+NYC Map Overal Crime Types
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_point(data = df, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+
+
+```
+
+Crime analysis for Bronx
+
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_polygon(data=dfBronx,aes(x = Longitude, y = Latitude))+
+geom_point(data = dfBronx, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+
+```
+
+Crime analysis for Queens
+
+
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_polygon(data=dfQUEENS,aes(x = Longitude, y = Latitude))+
+geom_point(data = dfQUEENS, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+```
+
+
+
+Crime analysis for Manhattan
+
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_polygon(data=dfManhattan,aes(x = Longitude, y = Latitude))+
+geom_point(data = dfManhattan, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+```
+
+
+Crime analysis for Brooklyn
+
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_polygon(data=dfBrooklyn,aes(x = Longitude, y = Latitude))+
+geom_point(data = dfBrooklyn, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+```
+
+
+Crime analysis for Staten Island
+
+```{r fig.height=10,fig.width=10}
+
+ggplot()+geom_polygon(data=dfSTIsland,aes(x = Longitude, y = Latitude))+
+geom_point(data = dfSTIsland, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD))) +theme(legend.position = "top")
+
+```
+
+Overal Crime data view
+
+```{r fig.height=10,fig.width=10}
+
+ggmap(NewYork) +
+geom_point(data = df, aes(x = Longitude, y = Latitude,colour = factor(LAW_CAT_CD)))+ scale_colour_manual(values = rainbow(14)) + labs(x = "Longitude", y = "Latitude", title = "Map of NYC with the borough boundaries")+theme(legend.position = "top")
+#+facet_wrap(~crime_year,ncol = 2)
+```
+
+Crime High density regions
+
+```{r fig.height=10,fig.width=10}
+
+
+ggmap(NewYork) +
+  stat_density2d(aes(x = Longitude, y = Latitude, fill=..level..), data=df,geom="polygon", alpha=0.2)+
+  scale_fill_gradient(low = "yellow", high = "red")+theme(legend.position = "top")
+#facet_wrap(~crime_year, ncol=2)+
+ 
+```
+
+
+
+CRime analsis by year
+
+```{r fig.height=10,fig.width=10}
+
+ggmap(NewYork) +
+geom_point(data = df, aes(x = Longitude, y = Latitude), color = "red")+facet_wrap(~crime_year,ncol = 2)+theme(legend.position = "top")
+
+```
+
+
+
+
+
+
+
+
