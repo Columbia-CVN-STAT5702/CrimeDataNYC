@@ -1,0 +1,62 @@
+---
+title: "bld14"
+author: "Brent Daniel"
+date: "3/18/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+setwd("/Volumes/FactoryUsers/Users/bdaniel/Dropbox/Columbia Video Network/2018 a Data Visualization/CrimeDataNYC")
+library(data.table)
+
+fread("CrimeData/NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->df
+
+# bring in Borough Population and massage it
+bdf <- fread("Data_Files/BoroughPop.csv")
+bdf <- bdf[1:6,]
+bdf$BORO_NM <- c("TOTAL","BRONX","BROOKLYN","MANHATTAN","QUEENS","STATEN ISLAND")
+
+
+library(dplyr)
+# summarize for mosaic, per capita plots
+df_bsum <- df %>% 
+  filter(!is.na(BORO_NM)) %>%
+  group_by(BORO_NM,LAW_CAT_CD) %>% 
+  summarize(Freq = n())
+
+# merge in the borough population
+df_bsum <- merge(df_bsum, bdf, by="BORO_NM")
+
+# per capita calculation
+df_bsum$PerCap <- df_bsum$Freq/df_bsum$`2016 Estimate`
+
+library(grid)
+library(vcd)
+```
+
+That as prep for the first plot.
+
+```{r}
+# Mosaic By Count
+mosaic(LAW_CAT_CD~BORO_NM, df_bsum, direction=c("v","h"))
+```
+
+This shows crime totals by category, showing how there are fewer crimes in Staten Island than, say, Brooklyn
+
+
+```{r}
+# By Per Capita -- you have to have "Freq" be the column for the thing the Mosaic will use for frequency, so 
+# for Per Capita, you need to swap the Freq column names
+colnames(df_bsum)[colnames(df_bsum)=="Freq"] <- "Count"
+colnames(df_bsum)[colnames(df_bsum)=="PerCap"] <- "Freq"
+mosaic(LAW_CAT_CD~BORO_NM, df_bsum, direction=c("v","h"))
+```
+
+Here, we see the Brooklyn's crime rate per Capita is not the highest (width of bars). Seem like it is the Bronx, then Manhattan.  We can also see the Queez has the lowest Per Capita.
+
+Type of Crime, per capital, doesn't have that large a variation. I have more to look into here.
