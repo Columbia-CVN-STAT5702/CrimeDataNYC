@@ -169,5 +169,61 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 ```
 
+## Boro, Juris, Crime Categories
+```{r}
+                  #group_by(BORO_NM,JURIS_DESC,OFNS_DESC) %>% 
+                  #mutate(count=n()) %>%
+  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+  crime_sort <- crime_df %>% drop_na() %>%
+                  filter(BORO_NM != "", JURIS_DESC !="", (OFNS_DESC == top_ofns))%>%
+                  group_by(BORO_NM,LAW_CAT_CD,OFNS_DESC) %>% 
+                  summarize(Freq=n())
+  
+  crime_sort$TOP_OFFENSE = crime_sort$OFNS_DESC[,drop=TRUE]
+  
+  #doubledecker(OFNS_DESC~BORO_NM, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
+  mosaic(TOP_OFFENSE~BORO_NM, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
+  
+  
+  #doubledecker(TOP_OFFENSE~BORO_NM, data=crime_sort)
+  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=BORO_NM)) +
+    geom_col() +
+    facet_grid(LAW_CAT_CD~ BORO_NM) +
+    coord_flip()
+```
+
+** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
+
+
+```{r}
+  ggplot(crime_sort, aes(TOP_OFFENSE,Freq)) +
+           geom_col() +
+           facet_wrap(~BORO_NM) + 
+           coord_flip()
+                         
+```
+
 * I tired indivial Crime Types, the colors were too confusing as lot of categories
+
+
+```{r fig.height=16}
+  crime_parks <- crime_df %>% drop_na() %>%
+                  filter(BORO_NM!="",PARKS_NM!="",LAW_CAT_CD!="") %>%
+                  group_by(BORO_NM,PARKS_NM,LAW_CAT_CD) %>%
+                  summarize(count=n())
+
+  crime_parks <- crime_parks %>%
+                  arrange(desc(count))
+  
+  ggplot(crime_parks,aes(PARKS_NM,count, fill=LAW_CAT_CD)) +
+    geom_col() + 
+    facet_wrap(~BORO_NM, ncol=1) +
+    coord_flip()
+```
+
+## trial on ggmap
+```{r}
+  library(ggmap)
+  
+```
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
