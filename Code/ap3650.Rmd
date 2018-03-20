@@ -3,8 +3,9 @@ title: "ap3650_nyc_crime_data_visualization"
 author: "Anita"
 date: "March 13, 2018"
 output:
-  pdf_document: default
   html_document: default
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -232,6 +233,11 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
   ggplot(crime_pk_1 ,aes(PARKS_NM, count, fill=OFNS_DESC)) +
     geom_col() + 
     facet_wrap(~BORO_NM, ncol=1, scales="free_y") +
+    coord_flip()
+  
+  ggplot(crime_pk_1 ,aes(PARKS_NM, count, fill=OFNS_DESC)) +
+    geom_col() + 
+    facet_wrap(~BORO_NM, ncol=1, scales="free") +
     coord_flip()
 ```
 
