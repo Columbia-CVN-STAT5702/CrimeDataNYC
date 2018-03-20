@@ -1,4 +1,6 @@
 #Note the "NYPD_Complaint_Data_Historic.csv" should be in the working directory when running this file.
+#Note the "nyc_weather_data.csv" file should be in the working directory when running this file.
+#Note the "nyc_moon_data.csv" file should be in the working directory when running this file.
 
 library(dplyr)
 library(tidyr)
@@ -62,8 +64,6 @@ fm_summary$Pct <- as.factor(fm_summary$Pct)
 tidy_fm_summary <- fm_summary %>% gather(key = "Moon Phase", value = "AvgDailyReports", -Pct)
 #Cleveland dot plot to compare crime rate on full moon days
 ggplot(tidy_fm_summary, aes(x = Pct, y = AvgDailyReports, color = `Moon Phase`)) + geom_point() + coord_flip() + ggtitle("Affect of Full Moon on Crime Reports")
-
-
 
 #Plot histogram of incidents by police precinct
 data_pct <- crime_df %>% group_by(Pct) %>% summarize(count = n()) %>% drop_na()
