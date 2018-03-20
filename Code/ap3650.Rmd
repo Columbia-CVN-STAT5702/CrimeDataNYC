@@ -207,17 +207,31 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 
 ```{r fig.height=16}
-  crime_parks <- crime_df %>% drop_na() %>%
+  crime_parks <- tbl_df(crime_df) %>% drop_na() %>%
                   filter(BORO_NM!="",PARKS_NM!="",LAW_CAT_CD!="") %>%
                   group_by(BORO_NM,PARKS_NM,LAW_CAT_CD) %>%
                   summarize(count=n())
 
-  crime_parks <- crime_parks %>%
-                  arrange(desc(count))
+  #crime_parks <- crime_parks %>%
+  #                arrange(desc(count))
   
-  ggplot(crime_parks,aes(PARKS_NM,count, fill=LAW_CAT_CD)) +
+ crime_pk <- crime_parks %>% 
+                 group_by(BORO_NM) %>%
+                 top_n(n=10, wt=count)
+ 
+  crime_parks_1 <- crime_df %>% drop_na() %>%
+                  filter(BORO_NM!="",PARKS_NM!="",OFNS_DESC!="") %>%
+                  group_by(BORO_NM,PARKS_NM,OFNS_DESC) %>%
+                  summarize(count=n())
+ 
+ crime_pk_1 <- crime_parks_1 %>% 
+                 group_by(BORO_NM) %>%
+                 top_n(n=10, wt=count)
+ 
+ 
+  ggplot(crime_pk_1 ,aes(PARKS_NM, count, fill=OFNS_DESC)) +
     geom_col() + 
-    facet_wrap(~BORO_NM, ncol=1) +
+    facet_wrap(~BORO_NM, ncol=1, scales="free_y") +
     coord_flip()
 ```
 
