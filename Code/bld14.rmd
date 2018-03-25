@@ -1,7 +1,7 @@
 ---
 title: "bld14"
 author: "Brent Daniel"
-date: "3/18/2018"
+date: "3/18/2018, 3/25/18"
 output: html_document
 ---
 
@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Borough Relationship to Crime
 
 ```{r}
 setwd("/Volumes/FactoryUsers/Users/bdaniel/Dropbox/Columbia Video Network/2018 a Data Visualization/CrimeDataNYC")
@@ -60,3 +61,123 @@ mosaic(LAW_CAT_CD~BORO_NM, df_bsum, direction=c("v","h"))
 Here, we see the Brooklyn's crime rate per Capita is not the highest (width of bars). Seem like it is the Bronx, then Manhattan.  We can also see the Queez has the lowest Per Capita.
 
 Type of Crime, per capital, doesn't have that large a variation. I have more to look into here.
+
+
+# Crime by level vs. Temperature
+
+Setting up the data as Rich did..
+
+````{r}
+## leverage Rich's code for CRIME VS TEMPERATURE
+# simplfy column-names
+var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
+               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", 
+               "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+colnames(df) <- var_names
+
+
+#Convert dates and times to correct format -- per Rich
+df$DateStart <- as.Date(df$DateStart, format='%m/%d/%Y')
+df$DateEnd <- as.Date(df$DateEnd, format='%m/%d/%Y')
+df$DateReport <- as.Date(df$DateReport, format='%m/%d/%Y')
+
+#Read in weather data from file -- per Rich
+weather_select = c("DATE", "AWND", "PRCP", "SNOW", "TMAX")
+setwd("/Volumes/FactoryUsers/Users/bdaniel/Dropbox/Columbia Video Network/2018 a Data Visualization/CrimeDataNYC")
+weather_data <- fread("Data_Files/nyc_weather_data.csv", na.strings="", select = weather_select, stringsAsFactors = FALSE)
+weather_data$DATE <- as.Date(weather_data$DATE)
+weather_data$AWND <- as.numeric(weather_data$AWND)
+weather_data$PRCP <- as.numeric(weather_data$PRCP)
+weather_data$SNOW <- as.numeric(weather_data$SNOW)
+weather_data$TMAX <- as.numeric(weather_data$TMAX)
+
+#Merge the data together -- per Rich
+df <- df[weather_data, on=.(DateStart = DATE)]
+````
+
+Relationship between Crime and Temperature
+
+```{r}
+### Relationship between max temp and crime volume
+# set up the data by day and Level
+daily_df <- df %>% group_by(DateStart,Level) %>% summarize(CrimeCount=n(),MaxTemp=mean(TMAX))
+# plot it -- well, plot it later after the linear models are run so we can see the linear slopes
+library(ggplot2)
+# daily_df %>% ggplot(aes(x=MaxTemp, y=CrimeCount, color=Level)) + geom_point()
+# linear model: Felonies
+f_df <- daily_df %>% filter(Level=="FELONY")
+flm <- lm(CrimeCount~MaxTemp, f_df)
+# linear model: Misdemeanors
+m_df <- daily_df %>% filter(Level=="MISDEMEANOR")
+mlm <- lm(CrimeCount~MaxTemp, m_df)
+# linear model: Violation
+v_df <- daily_df %>% filter(Level=="VIOLATION")
+vlm <- lm(CrimeCount~MaxTemp, v_df)
+
+````
+
+Let's check the normality of the daily counts
+
+```{r}
+# see shape of the daily counts... normal?
+daily_df %>% ggplot(aes(CrimeCount)) +
+  geom_histogram() +
+  facet_wrap(~Level) +
+  ggtitle("Histograms of Daily Crime Count by Level of Crime")
+
+ggplot(daily_df, aes(x=CrimeCount)) +
+  geom_density(aes(group=Level, color=Level, fill=Level), alpha=0.3) +
+  ggtitle("Density Curves of Daily Crime Count by Level of Crime")
+
+qqnorm(f_df$CrimeCount, main="Normal Q-Q Plot, Daily Felony Count", col="#F8766D") 
+qqnorm(m_df$CrimeCount, main="Normal Q-Q Plot, Daily Misdemeanor Count", col="#00BA38") 
+qqnorm(v_df$CrimeCount, main="Normal Q-Q Plot, Daily Violation Count", col="#619CFF") 
+````
+
+Scatterplot with linear model lines
+
+````{r}
+#replot the scatterplot with linear results
+ggplot(daily_df, aes(x=MaxTemp, y=CrimeCount, color=Level)) + 
+  geom_point() +
+  geom_abline(slope=flm[["coefficients"]][["MaxTemp"]],intercept=flm[["coefficients"]][["(Intercept)"]]) +
+  geom_abline(slope=mlm[["coefficients"]][["MaxTemp"]],intercept=mlm[["coefficients"]][["(Intercept)"]]) +
+  geom_abline(slope=vlm[["coefficients"]][["MaxTemp"]],intercept=vlm[["coefficients"]][["(Intercept)"]]) +
+  ggtitle("Daily Crime Counts vs. Temperature by Level of Crime with Linear Models")
+````
+
+Summaries of linear models
+
+````{r}
+# print summaries
+summary(flm)
+summary(mlm)
+summary(vlm)
+````
+
+The p-values are all very low, owning to how much data there is. The R-squared Adjusted is .... well, temperature explains some of the variance. More so for Violations, given how tight the distribution of violations are. Hm... Perhaps that's a function of the capacity for the police to write the violations?
+
+Now, we check the residuals of the linear models.
+
+````{r}
+# Residuals plots
+plot(f_df$MaxTemp, resid(flm), 
+     main="Residual Plot, Felonies vs. Max Temp", 
+     xlab="Maximum Temperature", 
+     ylab="Residuals of Crime Count", 
+     col="#F8766D",
+     abline(0,0))
+plot(m_df$MaxTemp, resid(mlm), 
+     main="Residual Plot, Misdemeanors vs. Max Temp", 
+     xlab="Maximum Temperature", 
+     ylab="Residuals of Crime Count", 
+     col="#00BA38",
+     abline(0,0))
+plot(v_df$MaxTemp, resid(vlm), 
+     main="Residual Plot, Violations vs. Max Temp", 
+     xlab="Maximum Temperature", 
+     ylab="Residuals of Crime Count", 
+     col="#619CFF",
+     abline(0,0))
+````
+
