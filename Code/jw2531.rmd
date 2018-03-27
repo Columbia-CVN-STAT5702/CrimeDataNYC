@@ -12,9 +12,15 @@ knitr::opts_chunk$set(warning = FALSE,
 ```{r cars}
 #if you have not please install data.table package before run the codes below
 #install.packages(data.table)
+library(zoo)
+library(vcd)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 library(forcats)
+library(vcdExtra)
+library(gridExtra)
+library(tidyverse)
 library(data.table)
 fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->df
 ```
@@ -27,58 +33,83 @@ df%>%select(CMPLNT_FR_DT,LAW_CAT_CD)%>%filter(!is.na(CMPLNT_FR_DT))%>%mutate(CMP
 
 ```{r}
 #time series of daily frequency of 3 crime categories 2006-2016
-df_Date%>%group_by(CMPLNT_FR_DT,LAW_CAT_CD)%>%dplyr::summarise(count=n())%>%ungroup->byDateLaw
+df_Date%>%group_by(CMPLNT_FR_DT,LAW_CAT_CD)%>%dplyr::summarise(count=n())%>%ungroup()%>%group_by(LAW_CAT_CD)%>%mutate(mon_mean=rollmean(count,30,fill=NA))%>%ungroup()->byDateLawMean
 
-ggplot(byDateLaw,aes(CMPLNT_FR_DT,count,color=LAW_CAT_CD))+geom_line()+ggtitle("Daily Crime Frequency since 2006")+labs(x="Date",y="Frequency")+theme(legend.title=element_blank())
+#daily rate
+byDateLawMean%>%ggplot()+
+  geom_line(aes(CMPLNT_FR_DT,count,color=LAW_CAT_CD))+
+  geom_line(aes(CMPLNT_FR_DT,mon_mean,group=LAW_CAT_CD))+
+  ggtitle("Daily Crime Frequency since 2006 with 30-day running mean")+
+  labs(x="Date",y="Frequency")+theme(legend.title=element_blank())+geom_line(aes(CMPLNT_FR_DT,count*0+1150))
+
+#Top 9 daily rate falls on Jan 1.
+byDateLawMean%>%arrange(desc(count))%>%filter(count>=count[9])%>%
+  mutate(CMPLNT_FR_DT=as.factor(CMPLNT_FR_DT))%>%
+  ggplot(aes(forcats::fct_reorder(CMPLNT_FR_DT, count),count))+geom_bar(stat="identity")+coord_flip()+ylab("Top 9 Daily Crime Frequency")+xlab("Date")
 ```
 
-* The crime frequency is decreasing over the years.
-* There are obvious annual variation/cycle.
+* The crime frequency is decreasing over the years this is because lots of cases occurred over the years haven't reported yet. 
+* There are obvious annual variation/cycle. 30-day running mean shows the cycle clearly.
+* There are spikes in the misdemeanor category. The top 9 dates with high frequency are shown in the barchart. They are on January 1 on almost each year from 2006-2016 except 2015 which is actually very close behind. These cases seemed like mistakening assigned an occurrence date as January 1 since by examining the relationships between RPT_DT,CMPLNT_FR_DT and CMPLNT_TO_DT, they don't seem make much sense comparing with others.
 \
 \
 ```{r}
 #frequency by month
-df_Date%>%mutate(Month=as.character(month(CMPLNT_FR_DT)))%>%group_by(Month,LAW_CAT_CD)%>%summarise(CntByMon=n())->byDateLaw_mon
+df_Date%>%mutate(Month=as.character(month(CMPLNT_FR_DT)))%>%group_by(Month,LAW_CAT_CD)%>%dplyr::summarise(CntByMon=n())->byDateLaw_mon
 
-byDateLaw_mon%>%ggplot(aes(fct_relevel(Month,"10","11","12",after=9),CntByMon))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free")+xlab("Month")
+byDateLaw_mon%>%mutate(Days=rep(31,3))%>%mutate(Days=ifelse(Month=="2",28,Days))%>%mutate(Days=ifelse(Month %in% c("4","6","9","11"),30,Days))->byDateLaw_mon
+byDateLaw_mon%>%ggplot(aes(fct_relevel(Month,"10","11","12",after=9),CntByMon/Days))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency (Monthly Mean)")+facet_wrap(~LAW_CAT_CD,scales="free_x")+xlab("Month")->p1
 ```
 
-* Indeed by barcharting over the months,we see May-Oct. is a high crime season.
-* One insteresting feature is January is a high peak during winter.
-\
-\
 ```{r}
 #frequency by day
-df_Date%>%mutate(Day=as.factor(format(CMPLNT_FR_DT,"%d")))%>%group_by(Day,LAW_CAT_CD)%>%summarise(CntByDay=n())->byDateLaw_day
+df_Date%>%mutate(Day=as.factor(format(CMPLNT_FR_DT,"%d")))%>%group_by(Day,LAW_CAT_CD)%>%dplyr::summarise(CntByDay=n())->byDateLaw_day
 
-byDateLaw_day%>%ggplot(aes(Day,CntByDay))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free")+xlab("Day of Month")
+#Day1-28 has the same total cnts=11yrs*12cnts/yr
+#Day 29 cnts=11yrs*11cnts/yr+3cnts (leap yrs)
+#Day 30 cnts=11*11; Day 31 cnts=7*11
+byDateLaw_day%>%mutate(cnts=rep(12*11,3))%>%mutate(cnts=ifelse(Day=="29",11*11+3,cnts))%>%mutate(cnts=ifelse(Day=="30",11*11,cnts))%>%mutate(cnts=ifelse(Day=="31",7*11,cnts))->byDateLaw_day
+
+byDateLaw_day%>%ggplot(aes(Day,CntByDay/cnts))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency (Daily Mean)")+facet_wrap(~LAW_CAT_CD,scales="free_x")+xlab("Day of Month")->p2
 ```
 
-* Not much interesting feature. But end of month and beginning of month stands out. We have to explore.
-\
-\
+
 ```{r}
 #frequency by weekday
-df_Date%>%mutate(Wkday=as.factor(weekdays(CMPLNT_FR_DT)))%>%group_by(Wkday,LAW_CAT_CD)%>%summarise(CntByWkday=n())->byDateLaw_wkday
+df_Date%>%mutate(Wkday=as.factor(weekdays(CMPLNT_FR_DT,abbreviate=TRUE)))%>%group_by(Wkday,LAW_CAT_CD)%>%dplyr::summarise(CntByWkday=n())->byDateLaw_wkday
 
-byDateLaw_wkday%>%ggplot(aes(fct_relevel(Wkday,"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"),CntByWkday))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free")+xlab("Day of Week")
+byDateLaw_wkday%>%ggplot(aes(fct_relevel(Wkday,"Mon","Tue","Wed","Thu","Fri","Sat","Sun"),CntByWkday))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free_x")+xlab("Day of Week")->p3
 ```
-
-* Violation is low during weekends but same during weekdays.
-* Felony and misdemeanor is high on Friday but low on Sunday nad Monday.
-\ 
-\
 
 ```{r}
 #picking non-missing CMPLNT_FR_TM
 df%>%filter(!is.na(CMPLNT_FR_TM))%>%mutate(CMPLNT_FR_DT=as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'))%>%filter(CMPLNT_FR_DT>=as.Date("2006-01-01"))->df_FRTM
 
-#Frequency by hour of day
-df_FRTM%>%mutate(Hour=as.factor(substr(CMPLNT_FR_TM,1,2)))%>%group_by(Hour,LAW_CAT_CD)%>%summarise(CntByHour=n())->byDateLaw_hour
+#Frequency by hour of day, combining hour 00 and hour 24 into hour 00
+df_FRTM%>%mutate(Hour=as.factor(substr(CMPLNT_FR_TM,1,2)))%>%group_by(Hour,LAW_CAT_CD)%>%dplyr::summarise(CntByHour=n())->byDateLaw_hour
+byDateLaw_hour$Hour[byDateLaw_hour$Hour=="24"]<-"00"
+byDateLaw_hour$Hour<-factor(byDateLaw_hour$Hour)
 
-byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free")+xlab("Hour of Day")
+byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~LAW_CAT_CD,scales="free_x")+xlab("Hour of Day")->p4
 ```
 
+```{r fig.height=4,fig,width=6}
+grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+\
+\
+* Indeed by barcharting over the months,we see Jun.-Oct. is a high crime season.
+* The fake January increasing was due to the errors in the records. 
+\
+\
+* The spike in Janurary is consistent with the analysis above. 
+* There seemed having a tendency of rounding every 5 day.
+\
+\
+* Violation is low during weekends but same during weekdays.
+* Felony and misdemeanor is high on Friday but low on Sunday nad Monday.
+\
+\
 * There is obvious day cycle in the crime occurrence. Early morning has the least crime occurrence while later afternoon has the most crime occurrence.
 \
 \
@@ -86,14 +117,14 @@ byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_fli
 #how the different crime types (OFNS_DESC) associated with different places (a heatmap)
 #first filling the missing OFNS_DESC infered from KY_CD
 df%>%select(KY_CD,OFNS_DESC)%>%group_by(KY_CD)%>%
-  summarise(desc=paste(unique(OFNS_DESC),collapse=","))%>%
+  dplyr::summarise(desc=paste(unique(OFNS_DESC),collapse=","))%>%
   mutate(KY_CD=as.factor(KY_CD))%>%arrange(desc)->match_code_desc
 
 df%>%
   select(KY_CD,PREM_TYP_DESC)%>%
   filter(!is.na(PREM_TYP_DESC))%>%
   mutate(KY_CD=as.factor(KY_CD))%>%
-  group_by(KY_CD,PREM_TYP_DESC)%>%summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyPREM
+  group_by(KY_CD,PREM_TYP_DESC)%>%dplyr::summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyPREM
 
 #merging to get OFNS_DESC vs PREM_TYP_DESC correspondence
 merge(byKYbyPREM, match_code_desc, by.x='KY_CD', by.y='KY_CD')->byKYbyPREM_match
@@ -101,11 +132,11 @@ merge(byKYbyPREM, match_code_desc, by.x='KY_CD', by.y='KY_CD')->byKYbyPREM_match
 byKYbyPREM_match%>%group_by(desc)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->desc_desc_cnt
 byKYbyPREM_match%>%group_by(PREM_TYP_DESC)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(desc(mean))->PREM_desc_cnt
 
-byKYbyPREM_match%>%ggplot(aes(
-  fct_relevel(as.factor(desc),as.character(desc_desc_cnt$desc[sort(desc_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
-  fct_relevel(as.factor(PREM_TYP_DESC),as.character(PREM_desc_cnt$PREM_TYP_DESC[sort(PREM_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow"),na.value="blue")+
+byKYbyPREM_match%>%
+  ggplot(aes(fct_relevel(as.factor(desc),as.character(desc_desc_cnt$desc[sort(desc_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
+  fct_relevel(as.factor(PREM_TYP_DESC),as.character(PREM_desc_cnt$PREM_TYP_DESC[sort(PREM_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow","green","blue","violet"),na.value="black")+
   scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+
-    geom_tile()+theme(axis.text.x = element_text(size=3,angle = 90, hjust = 1),axis.text.y=element_text(size=4))+ylab("Premises")+xlab("OFNS_DESC")
+    geom_tile(color="white",size=0.25)+theme(axis.text.x = element_text(size=5,angle = 90, hjust = 1),axis.text.y=element_text(size=5))+ylab("Premises")+xlab("OFNS_DESC")
 ```
 \
 \
@@ -119,7 +150,10 @@ df%>%
   filter(!is.na(CMPLNT_FR_TM))%>%
   mutate(KY_CD=as.factor(KY_CD))%>%
   mutate(Hour=as.factor(substr(CMPLNT_FR_TM,1,2)))%>%
-  group_by(KY_CD,Hour)%>%summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyFRTM
+  group_by(KY_CD,Hour)%>%dplyr::summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyFRTM
+#combining hour 00 and hour 24 into hour 00
+byKYbyFRTM$Hour[byKYbyFRTM$Hour=="24"]<-"00"
+byKYbyFRTM$Hour<-factor(byKYbyFRTM$Hour)
 
 #merging to get OFNS_DESC vs CMPLNT_FR_TM correspondence
 merge(byKYbyFRTM, match_code_desc, by.x='KY_CD', by.y='KY_CD')->byKYbyFRTM_match
@@ -129,12 +163,28 @@ byKYbyFRTM_match%>%group_by(Hour)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE
 
 byKYbyFRTM_match%>%ggplot(aes(
   fct_relevel(as.factor(desc),as.character(desc2_desc_cnt$desc[sort(desc2_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
-  Hour,fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow"),na.value="blue")+
+  Hour,fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow","green","blue","violet"),na.value="black")+
   scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+
-    geom_tile()+theme(axis.text.x = element_text(size=3,angle = 90, hjust = 1),axis.text.y=element_text(size=4))+ylab("Hour")+xlab("OFNS_DESC")
+    geom_tile(color="white",size=0.25)+theme(axis.text.x = element_text(size=5,angle = 90, hjust = 1),axis.text.y=element_text(size=5))+ylab("Hour")+xlab("OFNS_DESC")
 ```
 \
 \
-* Do we see any association between time and certain crime? Do see some high dentity around middle up right area, which is consistent with the barcharting daily cycle.
+* Do we see any association between time and certain crime? Do see some high density around middle up right area, which is consistent with the barcharting daily cycle.
+\
+\
+```{r fig.height=4}
+#matching Pct with Boro
+df%>%select(ADDR_PCT_CD,BORO_NM)%>%filter(!is.na(ADDR_PCT_CD) & !is.na(BORO_NM))%>%group_by(ADDR_PCT_CD)%>%
+  dplyr::summarise(boro=paste(unique(BORO_NM),collapse=","))%>%
+  mutate(ADDR_PCT_CD=as.factor(ADDR_PCT_CD))%>%arrange(boro)->match_pct_boro
+
+df %>% select(LAW_CAT_CD,ADDR_PCT_CD)%>%group_by(LAW_CAT_CD,ADDR_PCT_CD)%>%
+  drop_na()%>%dplyr::summarize(count = n())%>%ungroup()->df_pct
+merge(df_pct,match_pct_boro,by.x="ADDR_PCT_CD",by.y="ADDR_PCT_CD")%>%arrange(desc(count))->df_pbl
+
+df_pbl%>%ggplot(aes(reorder(ADDR_PCT_CD, count), count,fill=boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("dark green", "orange","blue","green","red","brown","violet","yellow","navy","grey","pink","light blue"))
+```
+
+* Just to see if top precints occured in certain borough. Same as Rich's so if we are going to select this, just add color to Rich's. So we gain more information in one figure. Note, precint is not one-to-one correspondence to borough! Both claim to be where the incident occurred as described in doc.
 \
 \
