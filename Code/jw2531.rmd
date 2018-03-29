@@ -182,9 +182,29 @@ df %>% select(LAW_CAT_CD,ADDR_PCT_CD)%>%group_by(LAW_CAT_CD,ADDR_PCT_CD)%>%
   drop_na()%>%dplyr::summarize(count = n())%>%ungroup()->df_pct
 merge(df_pct,match_pct_boro,by.x="ADDR_PCT_CD",by.y="ADDR_PCT_CD")%>%arrange(desc(count))->df_pbl
 
-df_pbl%>%ggplot(aes(reorder(ADDR_PCT_CD, count), count,fill=boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("dark green", "orange","blue","green","red","brown","violet","yellow","navy","grey","pink","light blue"))
+df_pbl%>%ggplot(aes(reorder(ADDR_PCT_CD, count), count,fill=boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", rep("orange",2),rep("green",3),rep("red",4),rep("yellow",2)))->p5
+df_pbl%>%ggplot(aes(reorder(ADDR_PCT_CD, count), count,fill=LAW_CAT_CD)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", "green","red"))->p6
+grid.arrange(p5,p6,nrow=1)
 ```
 
-* Just to see if top precints occured in certain borough. Same as Rich's so if we are going to select this, just add color to Rich's. So we gain more information in one figure. Note, precint is not one-to-one correspondence to borough! Both claim to be where the incident occurred as described in doc.
+* Similar to Rich's precint plot. But precint number itself doesn't give meaningful information. We can add some meaningful information onto the plot by coloring in borough/location and crime types. Just to see which borough the precints with top crime rates are located, and frequency distribution of 3 crime categories in each precint. Note, there are about 16 cases with precint number not consistent with the borough name (code below will show a list of the precints). 
+
+* The borough legends can be modified to 5 borough rather than showing those with double borough names of particular precints. 
+\
+\
+```{r}
+df %>% select(ADDR_PCT_CD,BORO_NM)%>%group_by(ADDR_PCT_CD,BORO_NM)%>%drop_na()%>%dplyr::summarise(count=n())->tmp1
+for (i in  1:77) {if(nrow(tmp1%>%filter(ADDR_PCT_CD==(unique(tmp1$ADDR_PCT_CD))[i]))>1){print(tmp1%>%filter(ADDR_PCT_CD==(unique(tmp1$ADDR_PCT_CD))[i]))}}
+```
+\
+\
+```{r}
+df%>%filter(!is.na(PARKS_NM))->df_pk
+df_pk%>%select(LAW_CAT_CD)%>%group_by(LAW_CAT_CD)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))%>%ggplot(aes(LAW_CAT_CD,RelFreq))+geom_bar(stat="identity")+
+  coord_flip()+ylab("Level of Offense")+xlab("Relative Frequency")
+```
+\
+\
+* ~12538 cases recorded as occurred in parks/playground or greenspaces. Just a quick peek to see if the crime distribution share the same pattern as the overall data. It is. If needed, we can further investigate into this category.
 \
 \
