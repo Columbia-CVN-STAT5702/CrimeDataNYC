@@ -1,0 +1,12 @@
+name: CrimeDataNYCApp
+title: CrimeDataNYCApp
+username:
+account: rjl2168
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 311774
+bundleId: 1294744
+url: https://rjl2168.shinyapps.io/CrimeDataNYCApp/
+when: 1522405985.53823
+asMultiple: FALSE
+asStatic: FALSE
