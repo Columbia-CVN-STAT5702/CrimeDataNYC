@@ -105,10 +105,3 @@ start_date <- as.Date("2012-01-01")
 stop_date <- as.Date("2012-10-31")
 data3 <- crime_df %>% filter(DateReport >= start_date, DateReport <= stop_date) %>% select(DateReport, Level) %>% drop_na() %>% mutate(month_year = format(DateReport, "%m/%Y")) %>% group_by(month_year, Level) %>% summarize(total = n())
 ggplot(data3, aes(x = month_year, y = total)) + geom_col() + facet_grid(~Level) + coord_flip()
-
-####
-#The following script was used to generate a smaller dataset that will be used in the interactive shiny application:
-#Note that the "crime_df" dataframe was taken before dates and times were converted to a different format.
-#NycAppData <- crime_df %>% select("DateStart", "Level", "Boro", "Pct", "OffenseDesc", "Lat", "Long")
-#write.csv(NycAppData, file = "NycAppData1.csv", row.names = FALSE)
-#test_read <- fread("NycAppData1.csv", na.strings="", stringsAsFactors = TRUE)

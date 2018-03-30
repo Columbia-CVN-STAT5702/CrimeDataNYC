@@ -5,6 +5,7 @@
 library(shiny)
 library(leaflet)
 library(dplyr)
+library(tidyr)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -15,8 +16,8 @@ ui <- fluidPage(
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
-         dateInput("startDate", "Start Date"),
-         dateInput("endDate", "End Date"),
+         dateInput("startDate", "Start Date", "06-01-2012"),
+         selectInput("boro", "Borough", choices = c("ALL", "MANHATTAN", "BROOKLYN", "QUEENS", "BRONX", "STATEN ISLAND"), "ALL"),
          selectInput("Pct", "Precinct", choices = c("1", "104"), "1")
       ),
       
@@ -29,23 +30,28 @@ ui <- fluidPage(
    )
 )
 
-#Read in the NycAppData1.csv file for use in the app
-appData <- fread("../Data_Files/NycAppData1.csv", na.strings="", stringsAsFactors = TRUE)
-#Convert start date to the proper date format
-appData$DateStart <- as.Date(appData$DateStart, format='%m/%d/%Y')
+#Load the data file for the application
+load("NycAppData.RData")
 
 #Server Function
 server <- function(input, output) {
+  
   points <- eventReactive(input$updateMap, {
-    data_filter <- appData %>% filter(DateStart >= input$startDate, DateStart <= input$endDate) %>% select("Lat", "Long")
+    if (input$boro == "ALL"){
+      filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% select("Lat", "Long") %>% drop_na()
+    }
+    else {
+      filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% 
+        select("Lat", "Long") %>% drop_na()
+    }
+    cbind(filtered_data$Long, filtered_data$Lat)
    }, ignoreNULL = FALSE)
   
   output$NycMap <- renderLeaflet({
     leaflet() %>%
       addProviderTiles(providers$Stamen.TonerLite,
-                       options = providerTileOptions(noWrap = TRUE)
-      ) %>%
-      addMarkers(data = as.numeric(points())
+                       options = providerTileOptions(noWrap = TRUE)) %>%
+      addMarkers(data = points())
   })
 }
 
