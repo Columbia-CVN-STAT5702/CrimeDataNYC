@@ -24,10 +24,11 @@ library(ggplot2)
 library(dplyr)
 library(tidyverse)
 library(lubridate)
+library(RColorBrewer)
 
 #fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(PARKS_NM="c",HADEVELOPT="c"))->crime_df
-#fread("NYPD_Complaint_Data_Historic.csv",na.strings="")->crime_df
-crime_df <- read.csv("NYPD_Complaint_Data_Historic.csv", header=TRUE)
+crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="")
+#crime_df_1 <- read.csv("NYPD_Complaint_Data_Historic.csv", header=TRUE)
 ```
 
 ## Data Manipulations
@@ -67,7 +68,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 ## Month and Time and Type of Crime
 
 ```{r fig.height = 10, fig.width=10}
-  crime_df <- crime_df %>% drop_na()
+  #crime_df <- crime_df %>% drop_na()
   ggplot(crime_df, aes(LAW_CAT_CD)) +
   geom_bar() +
   #facet_wrap(~month(CMPLNT_FR_DT))
@@ -115,7 +116,8 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 ## length of Crime Vs Type of Crime 
 ```{r fig.height =20, fig.width=15}
-  crime_time <- crime_df %>%  drop_na() %>%
+  #crime_time <- crime_df %>%  drop_na() %>%
+  crime_time <- crime_df %>%
                     filter(year(CMPLNT_FR_DT)>2005) %>%
                     mutate(delta_time = as.numeric(CMPLNT_TO_DT - CMPLNT_FR_DT)) %>%
                     group_by(OFNS_DESC, delta_time) %>%
@@ -144,7 +146,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 ## Attempted Crime Trend 
 ```{r}
-  crime_stat <- crime_df %>% drop_na() %>%
+  crime_stat <- crime_df %>%
                   filter(CRM_ATPT_CPTD_CD=="ATTEMPTED" & year(CMPLNT_FR_DT)>2005 & LAW_CAT_CD != "") %>%
                   group_by(Date=floor_date(CMPLNT_FR_DT,"year"),LAW_CAT_CD) %>%
                   summarize(count=n())
@@ -157,7 +159,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 ## To find Top 10 Crime Categories, mosaic plots building blocks
 ```{r fig.height=12, fig_width = 10}
-  crime_top <- crime_df %>% drop_na() %>%
+  crime_top <- crime_df %>% 
                   filter(OFNS_DESC!="") %>%
                   group_by(OFNS_DESC) %>%
                   summarize(count=n())
@@ -175,7 +177,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
                   #group_by(BORO_NM,JURIS_DESC,OFNS_DESC) %>% 
                   #mutate(count=n()) %>%
   top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
-  crime_sort <- crime_df %>% drop_na() %>%
+  crime_sort <- crime_df %>% 
                   filter(BORO_NM != "", JURIS_DESC !="", (OFNS_DESC == top_ofns))%>%
                   group_by(BORO_NM,LAW_CAT_CD,OFNS_DESC) %>% 
                   summarize(Freq=n())
@@ -193,10 +195,64 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
     coord_flip()
 ```
 
+## Time Trend of Top OFFENSE Category 
+
+```{r}
+    top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+    crime_time_top_ofns <- crime_df %>%
+                            filter(year(CMPLNT_FR_DT)>2005, (OFNS_DESC == top_ofns)) %>%
+                            group_by(Date=floor_date(CMPLNT_FR_DT, "year"),OFNS_DESC) %>%
+                            summarize(count=n()) 
+    
+    crime_time_top_ofns <- crime_time_top_ofns %>%
+                            group_by(OFNS_DESC) %>%
+                            mutate(rel_count = count*100/count[1])
+
+    ggplot(crime_time_top_ofns, aes(Date,count, color = OFNS_DESC))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Offense Catgory VS year")
+
+    ggplot(crime_time_top_ofns, aes(Date,rel_count, color = OFNS_DESC))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Offense Catgory - Common Starting Point VS year")
+```  
+## Crime PD top 
+
+```{r}
+    crime_pd_top_all_boro <- crime_df %>%
+                      filter(!is.na(BORO_NM)) %>%
+                      filter(PD_DESC != "" && !is.na(PD_DESC) && OFNS_DESC != "" && BORO_NM != ""  ) %>%
+                      group_by(BORO_NM,PD_DESC) %>%
+                      summarize(count = n()) %>%
+                      top_n(n=6, wt=count) %>%
+                      arrange(BORO_NM, desc(count))
+                    
+
+    crime_pd_top <- crime_df %>%
+                      filter(PD_DESC != "" && !is.na(PD_DESC)  && (BORO_NM != "")) %>%
+                      group_by(PD_DESC) %>%
+                      summarize(count = n()) %>%
+                      top_n(n=20, wt=count)
+ 
+
+  ggplot(crime_pd_top, aes(reorder(PD_DESC,count), count)) +
+    geom_col() +
+    coord_flip()
+
+  ggplot(crime_pd_top_all_boro, aes(reorder(PD_DESC,count),count, fill=BORO_NM)) +
+    geom_col() +
+    coord_flip() + 
+    facet_wrap(~BORO_NM, scales="free")
+```
+
+# total classification of overall crimes (pd_desc) -> 409 
+# 
+
 ** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
 
 
 ```{r}
+  ## use freq density here
   ggplot(crime_sort, aes(TOP_OFFENSE,Freq)) +
            geom_col() +
            facet_wrap(~BORO_NM) + 
@@ -208,7 +264,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
 
 
 ```{r fig.height=16}
-  crime_parks <- tbl_df(crime_df) %>% drop_na() %>%
+  crime_parks <- crime_df %>% 
                   filter(BORO_NM!="",PARKS_NM!="",LAW_CAT_CD!="") %>%
                   group_by(BORO_NM,PARKS_NM,LAW_CAT_CD) %>%
                   summarize(count=n())
@@ -220,7 +276,7 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
                  group_by(BORO_NM) %>%
                  top_n(n=10, wt=count)
  
-  crime_parks_1 <- crime_df %>% drop_na() %>%
+  crime_parks_1 <- crime_df %>% 
                   filter(BORO_NM!="",PARKS_NM!="",OFNS_DESC!="") %>%
                   group_by(BORO_NM,PARKS_NM,OFNS_DESC) %>%
                   summarize(count=n())
@@ -229,21 +285,31 @@ crime_df$CMPLNT_TO_TM <- as.POSIXct(crime_df$CMPLNT_TO_TM, format='%H:%M:%S')
                  group_by(BORO_NM) %>%
                  top_n(n=10, wt=count)
  
- 
+  getPalette = colorRampPalette(brewer.pal(18, "Set1"))
+  
   ggplot(crime_pk_1 ,aes(PARKS_NM, count, fill=OFNS_DESC)) +
     geom_col() + 
-    facet_wrap(~BORO_NM, ncol=1, scales="free_y") +
+    facet_wrap(~BORO_NM, ncol=1, scales="free_y") + 
+    scale_fill_manual(values = getPalette(18)) +
+    # scale_fill_brewer(palette="Set3") +
     coord_flip()
   
   ggplot(crime_pk_1 ,aes(PARKS_NM, count, fill=OFNS_DESC)) +
     geom_col() + 
     facet_wrap(~BORO_NM, ncol=1, scales="free") +
+    scale_fill_manual(values = getPalette(18)) +
     coord_flip()
 ```
+
 
 ## trial on ggmap
 ```{r}
   library(ggmap)
+
+  #NYC <- get_map(location = "new york city",  color = "bw", zoom = 15, source = "google")
+  #ggmap(NewYork)
+  #
+  #ggplot()+geom_point(data = crime_df, aes(x = Longitude, y = Latitude ,colour = factor(LAW_CAT_CD)))
   
 ```
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
