@@ -1,0 +1,27 @@
+---
+title: "Data Access and Read format"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="")
+
+crime_df%>%mutate(CMPLNT_FR_DT=as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'),
+                  CMPLNT_TO_DT=as.Date(CMPLNT_TO_DT,format='%m/%d/%Y'),
+                  RPT_DT=as.Date(RPT_DT,format='%m/%d/%Y'))->df
+crime_df<-df
+
+#factor variables that you want them to be factor type, modify the variable list to your needs 
+crime_df[,c("KY_CD","ADDR_PCT_CD","PREM_TYP_DESC")]<-lapply(crime_df[,c("KY_CD","ADDR_PCT_CD","PREM_TYP_DESC")],factor)
+
+var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
+               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", 
+               "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+
+colnames(crime_df)<-var_names
+```
