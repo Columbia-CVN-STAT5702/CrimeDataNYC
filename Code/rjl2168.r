@@ -105,3 +105,34 @@ start_date <- as.Date("2012-01-01")
 stop_date <- as.Date("2012-10-31")
 data3 <- crime_df %>% filter(DateReport >= start_date, DateReport <= stop_date) %>% select(DateReport, Level) %>% drop_na() %>% mutate(month_year = format(DateReport, "%m/%Y")) %>% group_by(month_year, Level) %>% summarize(total = n())
 ggplot(data3, aes(x = month_year, y = total)) + geom_col() + facet_grid(~Level) + coord_flip()
+
+
+##################################
+#Stop and Frisk Data
+#Read in data on the total annual stop and frist incidents in NYC
+sqf <- fread("StopAndFrisk.csv")
+sqf$Year <- as.factor(sqf$Year)
+sqf$Stops <- as.numeric(sqf$Stops)
+
+#Create a grouped summary dataframe for total number of each offence for every year
+data4 <- crime_df %>% mutate(Year = year(DateReport)) %>% group_by(Year, OffenseDesc) %>% summarize(count = n()) %>% drop_na()
+
+#Loop through each Offense and determine the correlation with sqf data
+iterations = 70
+variables = 2
+
+output <- matrix(ncol=variables, nrow=iterations)
+for (i in 1:iterations) {
+  output[i,1] <- levels(data4$OffenseDesc)[i]
+  data_offense <- data4 %>% filter(OffenseDesc == levels(data4$OffenseDesc)[i])
+  if (nrow(data_offense) == 11){
+    correlation = cor(data_offense$count, sqf$Stops)
+  }
+  else {
+    correlation = ""
+  }
+  output[i,2] <- correlation
+}
+
+corr_df <- data.frame("OffenseDesc" = output[,1], "Correlation" = output[,2])
+corr_df <- corr_df %>% drop_na() %>% arrange(desc(Correlation))
