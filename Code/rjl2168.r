@@ -116,6 +116,7 @@ sqf$Stops <- as.numeric(sqf$Stops)
 
 #Create a grouped summary dataframe for total number of each offence for every year
 data4 <- crime_df %>% mutate(Year = year(DateReport)) %>% group_by(Year, OffenseDesc) %>% summarize(count = n()) %>% drop_na()
+data5 <- crime_df %>% mutate(Year = year(DateReport)) %>% group_by(Year, Level) %>% summarize(count = n()) %>% drop_na()
 
 #Loop through each Offense and determine the correlation with sqf data
 iterations = 70
@@ -134,5 +135,44 @@ for (i in 1:iterations) {
   output[i,2] <- correlation
 }
 
-corr_df <- data.frame("OffenseDesc" = output[,1], "Correlation" = output[,2])
-corr_df <- corr_df %>% drop_na() %>% arrange(desc(Correlation))
+offense_corr_df <- data.frame("OffenseDesc" = output[,1], "Correlation" = output[,2])
+offense_corr_df <- offense_corr_df %>% drop_na() %>% arrange(desc(Correlation))
+
+iterations = 3
+variables = 2
+
+output2 <- matrix(ncol=variables, nrow=iterations)
+for (i in 1:iterations) {
+  output2[i,1] <- levels(data5$Level)[i]
+  data_offense2 <- data5 %>% filter(Level == levels(data5$Level)[i])
+  if (nrow(data_offense2) == 11){
+    correlation = cor(data_offense2$count, sqf$Stops)
+  }
+  else {
+    correlation = ""
+  }
+  output2[i,2] <- correlation
+  
+  #Generate linear model for each Level
+  if (i == 1) {
+    lm_m <- lm(data_offense2$count ~sqf$Stops)
+    plot(sqf$Stops, data_offense2$count, main = "Misdemeneor")
+    abline(lm_m)
+  }
+  
+  if (i == 2) {
+    lm_f <- lm(data_offense2$count ~sqf$Stops)
+    plot(sqf$Stops, data_offense2$count, main = "Felony")
+    abline(lm_f)
+  }
+
+  if (i == 3) {
+    lm_v <- lm(data_offense2$count ~sqf$Stops)
+    plot(sqf$Stops, data_offense2$count, main = "Violation")
+    abline(lm_v)
+  }
+  
+}
+
+level_corr_df <- data.frame("Level" = output2[,1], "Correlation" = output2[,2])
+level_corr_df <- level_corr_df %>% drop_na() %>% arrange(desc(Correlation))
