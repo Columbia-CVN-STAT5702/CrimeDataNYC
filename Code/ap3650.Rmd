@@ -73,7 +73,7 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
 
 ## Type of Offense  VS Place of Offense
 
-```{r fig.height=10, fig.width=8}
+```{r fig.height=10, fig.width=16}
   ggplot(crime_df,aes(PremDesc)) +
     geom_bar() +
     facet_wrap(~Level) +
