@@ -39,6 +39,8 @@ var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport
 
 crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
 
+crime_df%>%mutate_if(is.character,funs(factor(.)))->crime_df
+
 ```
 
 ## Data Manipulations
@@ -66,7 +68,10 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
     ggtitle("Distribution of Crime Category")
 ```  
 
-## Type of Offense  
+** Observation **  
+1) Crime Rate of Misdemeanor > Felony > Violation
+
+## Type of Offense  VS Place of Offense
 
 ```{r fig.height=10, fig.width=8}
   ggplot(crime_df,aes(PremDesc)) +
@@ -75,8 +80,28 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
     coord_flip() + 
     ggtitle("Crime Category Vs Place of Crime")
   
+  
+  crime_place <- crime_df %>%
+                 filter(!is.na(PremDesc)) %>%
+                 group_by(Level,PremDesc) %>%
+                 summarize(count=n()) %>%
+                 top_n(n=10, wt=count) %>%
+                 arrange(Level, count) 
+  
+  ggplot(crime_place, aes(fct_reorder(PremDesc, count), count , fill=Level)) +
+    geom_bar(stat="identity") +
+    facet_wrap(~Level, scales="free") +
+    coord_flip() + 
+    ggtitle("Crime Category Vs Place of Crime for Different Categories")
+  
 
 ```
+
+**Observations**   
+1) This graph is messed up in order, i cant get the order right for "violation" category
+2) Shows top locations for crime under different categories
+3) Top 3 locations are almost same for call categories, more violations in Apt-Residence than Street. 
+4) Also observed violations could be parking / traffic violations, typical locations include Public school, Diners/Restaurants, grocery etc 
 
 ## Month and Time and Type of Crime
 
@@ -89,6 +114,12 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
   facet_grid(month(DateStart)~hour(TimeStart))
 
 ```
+
+** Inference **   
+1) Shows less crime during 5 am to 7 am , peak crime 3 pm to 8 pm  
+2) The peak and low hourly variances is consistent across months   
+
+
 
 ## Time Series - Trend of Crime Rate 
 ```{r}
@@ -111,20 +142,42 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
           geom_line() +
           ggtitle("Trend/Rate of Crimes in Each Category Across year - sampled month-wise")
     
-    crime_boro <- crime_df %>%
+    crime_boro_m <- crime_df %>%
                       filter(year(DateStart)> 2005 & Boro != "") %>%
                       group_by(Date=floor_date(DateStart,"month"),Boro) %>%
                       summarize(count=n())
     
-    ggplot(crime_boro,aes(Date,count,color=Boro)) +
+    ggplot(crime_boro_m,aes(Date,count,color=Boro)) +
       geom_line() +
       ggtitle("Crime Trend over Years comparing Boroughs")
 
+    crime_boro_y <- crime_df %>%
+                      filter(year(DateStart)> 2005 & Boro != "") %>%
+                      group_by(Date=floor_date(DateStart,"year"),Boro) %>%
+                      summarize(count=n()) %>%
+                      ungroup() %>%
+                      group_by(Boro) %>%
+                      mutate(rel_count = count*100/count[1])
+    
+    ggplot(crime_boro_y,aes(Date,count,color=Boro)) +
+      geom_line() +
+      ggtitle("Crime Trend over Years comparing Boroughs")
+    
+    ggplot(crime_boro_y,aes(Date,rel_count,color=Boro)) +
+      geom_line() +
+      ggtitle("Crime Trend over Years comparing Boroughs with common Starting Point")
+    
+    
+
+    
 ```
-* Shows monthly pattern similar to Jingbo's
-* Year pattern fluctuates 
-* Some NM_BORO are empty
+** Inference** 
+* Shows monthly pattern similar to Jingbo's, peaks in middle of year  
+* Year pattern fluctuates  
+* Some NM_BORO are empty , found this when plotting without using empty fields, this should be noted in missing data   
 * Gaps between bororughs reduces towards later years
+* Using Common Starting point for Crime Trend, we see that in 2008, Staten Island Crime made a huge jump.Need to investiagte why ?   
+
 
 
 ## length of Crime Vs Type of Crime 
@@ -138,44 +191,73 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
                 
   ggplot(crime_time,aes(delta_time)) +
     geom_histogram(na.rm=TRUE) +
-    facet_wrap(~OffenseDesc, ncol = 4)
+    facet_wrap(~OffenseDesc, ncol = 4, scales="free")
   
 ```
 1. There are some cases where there might be typo on "To Date" especially year might be typo   
 2. Observed larceny( grand and petite have lot of cases )  
 3. There are blank OFfense category
+4. I dont like this analysis anymore
 
 ## Atempted Crime vs Type of Crime
 ```{r fig.height=12, fig.width=8}
   crime_stat <- crime_df %>%
                   filter(AtptCptdStatus == "ATTEMPTED" & OffenseDesc !="") %>%
                   group_by(OffenseDesc) %>%
-                  summarize(count=n())
-  ggplot(crime_stat,aes(OffenseDesc,count)) +
+                  summarize(count=n()) %>%
+                  top_n(n=20, wt=count)
+
+  ggplot(crime_stat,aes(reorder(OffenseDesc,count),count)) +
       geom_col() +
       coord_flip() +
       ggtitle("Attempted Crime Status for Different Types of crime")
+  
+  crime_stat_cmtd <- crime_df %>%
+                  filter(AtptCptdStatus == "COMPLETED" & OffenseDesc !="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  top_n(n=20, wt=count)
+
+  ggplot(crime_stat_cmtd,aes(reorder(OffenseDesc,count),count)) +
+      geom_col() +
+      coord_flip() +
+      ggtitle("Completed Crime Status for Different Types of crime")
 ```
+
+** Inference **  
+1) Total number of offense categories under attempted category is around 55   
+2) Among top crimes in attempted catgeory is Robbery, Burglar, petit larceny, felony assault, grand lacerny
+3) Are these categories the top offense categories too ?   
+4) For completed categories, the top categories are Petit Larceny, Harrasment 2, Assualt 3, criminal mischief, Grand larceny 
+  
 
 ## Attempted Crime Trend 
 ```{r}
   crime_stat <- crime_df %>%
                   filter(AtptCptdStatus=="ATTEMPTED" & year(DateStart)>2005 & Level != "") %>%
                   group_by(Date=floor_date(DateStart,"year"),Level) %>%
-                  summarize(count=n())
-  ggplot(crime_stat, aes(Date,count,color=Level)) +
-    geom_line()
-    
+                  summarize(count=n()) %>% 
+                  ungroup() %>%
+                  group_by(Level) %>%
+                  mutate(rel_count = count*100/count[1])
 
-                  
+  ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
+    geom_line() +
+    ggtitle("Trend of Attempted Offense  over the years")
+
 ```
+
+**Inference**  
+1) Over the years, the rate for attempted crime category for Felony is reducing much drastically than violation or misdemeanor  
+
 
 ## To find Top 10 Crime Categories, mosaic plots building blocks
 ```{r fig.height=12, fig_width = 10}
   crime_top <- crime_df %>% 
                   filter(OffenseDesc!="") %>%
                   group_by(OffenseDesc) %>%
-                  summarize(count=n())
+                  summarize(count=n()) %>%
+                  top_n(n=15, wt=count)
 
   ggplot(crime_top, aes(reorder(OffenseDesc,count), count)) +
     geom_col() + 
@@ -185,8 +267,14 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
 
 ```
 
+** Inference **  
+1) The top crime categories are Petit Larceny, Harrasment , Assual, Criminal Mischielf, Grand Larceny , Dangerous Drugs  
+2) Do we need to find some distribution for these again ??   
+3) What is miscellaneous Penal LAw ?  
+
+
 ## Boro, Juris, Crime Categories
-```{r}
+```{r fig.height=10, fig.width=16}
                   #group_by(Boro,Jurisdiction,OffenseDesc) %>% 
                   #mutate(count=n()) %>%
   top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
@@ -197,20 +285,45 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
   
   crime_sort$TOP_OFFENSE = crime_sort$OffenseDesc[,drop=TRUE]
   
+  ## I tried changing the code, but I like the above 
+  crime_sort_1 <- crime_df %>%
+                  filter(Boro != "", OffenseDesc != "") %>%
+                  group_by(Boro,OffenseDesc) %>% 
+                  summarize(count=n())  %>%
+                  ungroup() %>%
+                  group_by(Boro) %>%
+                  top_n(n=6, wt=count)
+                    
+  
   #doubledecker(OffenseDesc~Boro, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
   mosaic(TOP_OFFENSE~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
   
   
   #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
-  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=Boro)) +
+  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=Level)) +
     geom_col() +
-    facet_grid(Level~ Boro) +
+    facet_wrap(~ Boro) +
     coord_flip()
 ```
 
+** Inference from Mosaic Plot **   
+1) How the Top crimes are distributed across Boroughs ?  
+2) Drugs are more in Bronx compared to Queens  
+3) Manhattan tops for Petit Larceny and Grand Larceny   
+4) In staten Island, Harrasment tops among other crimes in staten island  
+5) From the stacked bar graphs, it shows some comparisions easier. For example in mosaic it is difficult to compare areas of distribution when widths of bars are not same. However Here it clearly shows comparisons among boroughs for each crime as well within boroughs for different crimes   
+6) It also shows that for Drugs and Criminal mischief the crime category can either be Misdemeanor or Felony depending on severity. In both cases, number of crimes as misdemeanor is more than felony.  
+
+
+
+
+** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
+
+
+
 ## Time Trend of Top OFFENSE Category 
 
-```{r}
+```{r fig.height=8, fig.width=16}
     top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
     crime_time_top_ofns <- crime_df %>%
                             filter(year(DateStart)>2005, (OffenseDesc == top_ofns)) %>%
@@ -229,14 +342,25 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
           geom_line() +
           ggtitle("Trend/Rate of Crimes in Each Offense Catgory - Common Starting Point VS year")
 ```  
+
+**Inference **  
+1) The first graph captures the trend of crimes over the years 2006-2016.   
+2) The ranks of top crimes have not changed from 2006 o 2016, except in 2013, we see a dip in number of crimes of category "criminal mischief" , similar dip is observed in "Grand Larceny" in 2010 
+3) To compare the trends of crime by fixing them to a common starting point, we observe that the "dangerous Drugs" category has dipped down drasticaly when compared to other crimes.   
+4) Harrasment has shown an increase in the last five years.  
+5) There is slight increase in Criminal Mischief during the period 2013-2015
+6) There is a sudden increase in Grand Larceny and Petite Larceny from 2011 to 2013, more than other crimes  
+
 ## Crime PD top 
 
-```{r}
+```{r fig.height=10, fig.width=20}
     crime_pd_top_all_boro <- crime_df %>%
                       filter(!is.na(Boro)) %>%
                       filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc) && OffenseDesc != "" && Boro != ""  ) %>%
-                      group_by(Boro,IntOffenseDesc) %>%
+                      group_by(Boro,OffenseDesc, IntOffenseDesc) %>%
                       summarize(count = n()) %>%
+                      ungroup() %>%
+                      group_by(Boro) %>%
                       top_n(n=6, wt=count) %>%
                       arrange(Boro, desc(count))
                     
@@ -252,31 +376,25 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
     geom_col() +
     coord_flip()
 
-  ggplot(crime_pd_top_all_boro, aes(reorder(IntOffenseDesc,count),count, fill=Boro)) +
+  ggplot(crime_pd_top_all_boro, aes(reorder(IntOffenseDesc,count),count, fill=OffenseDesc)) +
     geom_col() +
     coord_flip() + 
-    facet_wrap(~Boro, scales="free")
+    facet_wrap(~Boro, scales="free" , ncol=2)
 ```
-
-# total classification of overall crimes (pd_desc) -> 409 
-# 
-
-** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
-
-
-```{r}
-  ## use freq density here
-  ggplot(crime_sort, aes(TOP_OFFENSE,Freq)) +
-           geom_col() +
-           facet_wrap(~Boro) + 
-           coord_flip()
-                         
-```
-
-* I tired indivial Crime Types, the colors were too confusing as lot of categories
+ **Inference**  
+ Interesting to observe the internal classification of top crimes levels   
+  1) These plots are just to analyse the sub categories of Crime/ Offense   
+ 2) Petite Larceny is generally from stores and building   
+ 3) Different levels of Harassment take the top ranks 2-4   
+ 4) Crimes involving Drugs are usually Possession of Marijuana  
+ 5) Not sure if you want to use borough comparisions again   
+ 
+  *total classification of overall crimes (pd_desc) -> 409 * 
 
 
-```{r fig.height=16}
+## Crimes in parks Analysis 
+
+```{r fig.height=16, fig.width = 16}
   crime_parks <- crime_df %>% 
                   filter(Boro!="",ParkName!="",Level!="") %>%
                   group_by(Boro,ParkName,Level) %>%
@@ -296,24 +414,29 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
  
  crime_pk_1 <- crime_parks_1 %>% 
                  group_by(Boro) %>%
-                 top_n(n=10, wt=count)
+                 top_n(n=10, wt=count) %>%
+                 arrange(Boro,desc(count))
  
   getPalette = colorRampPalette(brewer.pal(18, "Set1"))
   
-  ggplot(crime_pk_1 ,aes(ParkName, count, fill=OffenseDesc)) +
+  ggplot(crime_pk_1 ,aes(reorder(ParkName,count), count, fill=OffenseDesc)) +
     geom_col() + 
     facet_wrap(~Boro, ncol=1, scales="free_y") + 
     scale_fill_manual(values = getPalette(18)) +
     # scale_fill_brewer(palette="Set3") +
     coord_flip()
   
-  ggplot(crime_pk_1 ,aes(ParkName, count, fill=OffenseDesc)) +
+  ggplot(crime_pk_1 ,aes(reorder(ParkName,count),  count, fill=OffenseDesc)) +
     geom_col() + 
     facet_wrap(~Boro, ncol=1, scales="free") +
     scale_fill_manual(values = getPalette(18)) +
     coord_flip()
 ```
 
+** Inference **  
+1) Most parks in Bronx have crimes related to Drugs 
+2) Drugs does not figure among the top crimes in Cental park in Manhatan, where as other parks of Manhatan have Drugs as one of their top category  
+3) For the parks in Queens, Drugs does not figure as top crimes in any of the parks
 
 ## trial on ggmap
 ```{r}
