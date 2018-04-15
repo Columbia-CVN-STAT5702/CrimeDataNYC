@@ -51,11 +51,15 @@ weather_summary <- no_rain_summary  %>% left_join(rainy_day_summary, by = c("Pct
 weather_summary$Pct <- as.factor(weather_summary$Pct)
 #Tidy the summary table
 tidy_weather_summary <- weather_summary %>% gather(key = "Weather", value = "AvgDailyReports", -Pct)
-#Use a cleveland dot plot to show difference in averge daily crime on rainy days vs. non-rainy days
-ggplot(tidy_weather_summary, aes(x = Pct, y = AvgDailyReports, color = Weather)) + geom_point() + coord_flip() + ggtitle("Affect of Precipitation on Crime Reports")
-#Plot the difference in average crimes per day on a non-rainy day and average crimes per day on a rainy day for each precinct.
 weather_summary_diff <- weather_summary %>% mutate(Delta = Rain - NoRain)
-ggplot(weather_summary_diff, aes(x = Pct, y = Delta)) + geom_col() + theme(axis.text.x=element_text(angle=90, hjust=1)) + ggtitle("Difference in Average Number of Crimes per Day when Raining")
+
+weather_summary_arr <- weather_summary_diff %>% arrange(NoRain)
+weather_summary_arr <- weather_summary_arr %>% mutate(Pct = factor(Pct, Pct))
+ggplot(weather_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Rain, color="Rain"), size=1) + 
+  geom_step(aes(x=Pct, y=NoRain, color="No Rain"), size=1) + 
+  scale_color_discrete(name = "Precipitation") + 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(x= "Precinct", y = "Average Number of Crimes per Day")
 
 #Generate plot to compare averge number of crimes on full moon days as compared to non-full moon days
 crime_summary_reg <- crime_df %>% filter(phase != "Full Moon") %>% group_by(Pct) %>% summarize(count_reg = n(), n_days_reg = n_distinct(DateStart), Avg_Reg = count_reg/n_days_reg) %>% drop_na() %>% select(Pct, Avg_Reg)
@@ -65,11 +69,16 @@ fm_summary <- crime_summary_reg %>% left_join(crime_summary_fm, by = c("Pct" = "
 fm_summary$Pct <- as.factor(fm_summary$Pct)
 #Tidy the summary table
 tidy_fm_summary <- fm_summary %>% gather(key = "Moon Phase", value = "AvgDailyReports", -Pct)
-#Cleveland dot plot to compare crime rate on full moon days
-ggplot(tidy_fm_summary, aes(x = Pct, y = AvgDailyReports, color = `Moon Phase`)) + geom_point() + coord_flip() + ggtitle("Affect of Full Moon on Crime Reports")
-#Plot the difference in average crimes per day on a Full Moon day and average crimes per day on a non-Full Moon for each precinct.
 fm_summary_diff <- fm_summary %>% mutate(Delta = Avg_Fm - Avg_Reg)
-ggplot(fm_summary_diff, aes(x = Pct, y = Delta)) + geom_col() + theme(axis.text.x=element_text(angle=90, hjust=1)) + ggtitle("Difference in Average Number of Crimes per Day when There is a Full Moon")
+
+fm_summary_arr <- fm_summary_diff %>% arrange(Avg_Reg)
+fm_summary_arr <- fm_summary_arr %>% mutate(Pct = factor(Pct, Pct))
+ggplot(fm_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Avg_Reg, color="No Full Moon"), size=1) + 
+  geom_step(aes(x=Pct, y=Avg_Fm, color="Full Moon"), size=1) + 
+  scale_color_discrete(name = "Moon Phase") + 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(x= "Precinct", y = "Average Number of Crimes per Day")
+
 
 #Generate plot to compare average number of crimes on cold days as compared to hot days
 hot_day_summary <- crime_df %>% filter(TMAX > 90) %>% group_by(Pct) %>% summarize(count_hot = n(), n_days_hot = n_distinct(DateStart), Hot = count_hot/n_days_hot) %>% drop_na() %>% select(Pct, Hot)
@@ -79,11 +88,17 @@ temp_summary <- hot_day_summary  %>% left_join(cold_day_summary, by = c("Pct" = 
 temp_summary$Pct <- as.factor(temp_summary$Pct)
 #Tidy the summary table
 tidy_temp_summary <- temp_summary %>% gather(key = "Temp", value = "AvgDailyReports", -Pct)
-#Use a cleveland dot plot to show difference in averge daily crime on rainy days vs. non-rainy days
-ggplot(tidy_temp_summary, aes(x = Pct, y = AvgDailyReports, color = Temp)) + geom_point() + scale_color_manual(values=c("Blue", "Red")) + coord_flip() + ggtitle("Affect of Temperature on Crime Reports")
-#Plot the difference in average crimes per day on a cold days and average crimes per day on a hot days for each precinct.
 temp_summary_diff <- temp_summary %>% mutate(Delta = Cold - Hot)
-ggplot(temp_summary_diff, aes(x = Pct, y = Delta)) + geom_col() + theme(axis.text.x=element_text(angle=90, hjust=1)) + ggtitle("Difference in Average Number of Crimes per Day on Cold Days when compared to Hot Days")
+
+temp_summary_arr <- temp_summary_diff %>% arrange(Hot)
+temp_summary_arr <- temp_summary_arr %>% mutate(Pct = factor(Pct, Pct))
+cols <- c("Hot Days" = "red", "Cold Days" = "blue")
+ggplot(temp_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Hot, color="Hot Days"), size=1) + 
+  geom_step(aes(x=Pct, y=Cold, color="Cold Days"), size=1) + 
+  scale_color_manual(name = "Temperature", values = cols) + 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(x= "Precinct", y = "Average Number of Crimes per Day")
+
 
 #Plot histogram of incidents by police precinct
 data_pct <- crime_df %>% group_by(Pct) %>% summarize(count = n()) %>% drop_na()
