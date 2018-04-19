@@ -1,6 +1,7 @@
 setwd("/Volumes/FactoryUsers/Users/bdaniel/Dropbox/Columbia Video Network/2018 a Data Visualization/CrimeDataNYC/CrimeData")
 
 library(data.table)
+library(dplyr)
 crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="")
 
 crime_df%>%mutate(CMPLNT_FR_DT=as.Date(CMPLNT_FR_DT,format='%m/%d/%Y'),
@@ -26,7 +27,7 @@ bdf <- bdf[1:6,]
 bdf$Boro <- c("TOTAL","BRONX","BROOKLYN","MANHATTAN","QUEENS","STATEN ISLAND")
 
 
-library(dplyr)
+
 # summarize for mosaic, per capita plots
 df_bsum <-crime_df %>% 
   filter(!is.na(Boro)) %>%
@@ -123,8 +124,10 @@ df_bsum.pcap$Borough.y <- NULL
 df_bsum.pcap$"2010 Population.y" <- NULL
 df_bsum.pcap$"2016 Estimate.y" <- NULL
 
-tidy_bsum <- tidyr::gather(df_bsum.pcap, key="Year", value="PerCap", -"Boro", -"Level.x", -"Count.x", -"2010 Population.x", -"2016 Estimate.x", -"Borough.x")
+tidy_bsum <- tidyr::gather(df_bsum.pcap, key="Year", value="PerCap", -"Boro", -"Level", -"Count.x", -"2010 Population.x", -"2016 Estimate.x", -"Borough.x")
 
+
+library(ggplot2)
 ggplot(tidy_bsum, aes(x=Year, y=PerCap, fill=Level))+
   geom_bar(stat="identity",position="dodge") +
   scale_fill_discrete(name="Year",
@@ -134,6 +137,17 @@ ggplot(tidy_bsum, aes(x=Year, y=PerCap, fill=Level))+
   facet_wrap(~Boro) +
   ggtitle("Per Capita Crime Rates by Level by Borough by Time")  
 
+
+ggplot(tidy_bsum, aes(x=reorder(Boro, -PerCap), y=PerCap, fill=Year))+
+  geom_bar(stat="identity",position="dodge") +
+  scale_fill_discrete(name="Year",
+                      #breaks=c(1, 2),
+                      labels=c("2010 Census", "2016 Estimate")) +
+  xlab("Borough")+ylab("Per Capita Crime") +
+  facet_wrap(~Year+Level, scales = "free") +
+  theme(axis.text.x=element_text(angle=90,hjust=1))+
+  scale_fill_brewer(palette="Paired") +
+  ggtitle("Per Capita Crime Rates by Level by Borough by Time")  
 
 ## leverage Rich's code for CRIME VS TEMPERATURE
 

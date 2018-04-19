@@ -139,7 +139,7 @@ colnames(df_bsum2016)[colnames(df_bsum2016)=="PerCap"] <- "Freq"
 
 Then, let's compare those elements of the Mosaic a little more directly to see changes in per capita crime rate over time.
 
-```{r}
+```{r, fig.height=10}
 #Plot 2010 year over 2016 year by Borough
 colnames(df_bsum2010)[colnames(df_bsum2010)=="Freq"] <- "PerCap10"
 colnames(df_bsum2016)[colnames(df_bsum2016)=="Freq"] <- "PerCap16"
@@ -160,9 +160,24 @@ ggplot(tidy_bsum, aes(x=Year, y=PerCap, fill=Level))+
   xlab("Year")+ylab("Per Capita Crime") +
   facet_wrap(~Boro) +
   ggtitle("Per Capita Crime Rates by Level by Borough by Time") 
+
+
+ggplot(tidy_bsum, aes(x=reorder(Boro, -PerCap), y=PerCap, fill=Year))+
+  geom_bar(stat="identity",position="dodge") +
+  scale_fill_discrete(name="Year",
+                      #breaks=c(1, 2),
+                      labels=c("2010 Census", "2016 Estimate")) +
+  xlab("Borough")+ylab("Per Capita Crime") +
+  facet_wrap(~Year+Level, scales = "free") +
+  theme(axis.text.x=element_text(angle=90,hjust=1))+
+  scale_fill_brewer(palette="Paired") +
+  ggtitle("Per Capita Crime Rates by Level by Borough by Time")  
+ 
 ```
 
-These graphs show how there is an apparent drop in the rate of crime between 2010 and 2016, mostly driven by Misdemenaors (in every Borough, but most predominantly in the Bronx). We can see that the Felony rate has been mostly unchanged, except in Manhattan. Violations have gone up in every Borough except Staten Island. (Perhaps lending to my theory that Violations are a function of available police hours to write tickets.)
+From the first set of comparison graphs, we see how there is an apparent drop in the rate of crime between 2010 and 2016, mostly driven by Misdemenaors (in every Borough, but most predominantly in the Bronx). We can see that the Felony rate has been mostly unchanged, except in Manhattan. Violations have gone up in every Borough except Staten Island. (Perhaps lending to my theory that Violations are a function of available police hours to write tickets.)
+
+We also see there there are some notable differences between Boroughs in the Per Capita Crime Rates. Manhattan leads the way on Felonies, followed by the Bronx. The top two are in opposite order for Misdemeanors. But it is Staten Island and the Bronx that lead in Violations. For lowest rates, Staten Island is lowes for Felonies, followed by Queens, with Queens lowest for Misdemeanors and Violations.
 
 # Crime by level vs. Temperature
 
