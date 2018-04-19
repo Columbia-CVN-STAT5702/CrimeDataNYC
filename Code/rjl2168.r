@@ -191,3 +191,18 @@ for (i in 1:iterations) {
 
 level_corr_df <- data.frame("Level" = output2[,1], "Correlation" = output2[,2])
 level_corr_df <- level_corr_df %>% drop_na() %>% arrange(desc(Correlation))
+
+#Leaflet Interactive Work
+library(leaflet)
+library(geojsonio)
+library(htmltools)
+
+#Read in geojson data
+nyc_precincts <- geojsonio::geojson_read("nyc_precinct.geojson", what = "sp")
+
+#Plot data
+leaflet(nyc_precincts) %>%
+  addTiles() %>%
+  addPolygons(stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.3, fillColor = "blue", label = ~paste0("Pct: ", formatC(nyc_precincts@data[["Precinct"]])))
+
+
