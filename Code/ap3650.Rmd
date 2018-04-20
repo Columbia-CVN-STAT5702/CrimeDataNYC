@@ -70,7 +70,7 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
 
 ## Type of Offense  VS Place of Offense
 
-```{r fig.height=6, fig.width=10}
+```{r fig.height=6, fig.width=12}
   
   crime_place <- crime_df %>%
                  filter(!is.na(PremDesc),Level !="") %>%
@@ -93,16 +93,23 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
                  group_by(Level,PremDesc) %>%
                  summarize(count=n()) %>%
                  top_n(n=10, wt=count) %>%
-                 mutate(rel_freq = count/sum(count))
+                 mutate(rel_freq = count/sum(count)) %>%
+                 ungroup() %>%
+                 arrange(Level, rel_freq) %>%
+                 unite("PremLevel", PremDesc, rel_freq, sep = "_", remove = FALSE) %>%
+                 data.frame() %>%
+                 mutate(PremLevel = factor(PremLevel, levels = PremLevel))
 
-  ggplot(crime_place_2, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
+  ggplot(crime_place_2, aes(PremLevel, rel_freq)) +
     geom_bar(stat="identity") +
     facet_wrap(~Level, scales="free") +
     coord_flip() +
     ylab("Crime Count Frequency") +
     xlab("Place of Crime - Premises") +
+    scale_x_discrete(breaks=crime_place_2$PremLevel,labels=crime_place_2$PremDesc) +
     ggtitle(" Place of Crime Distribution Across Crime Categories")
   
+    
 
 ```
 
@@ -111,15 +118,176 @@ The first plot shows the overall top 10 Locations of Crimes in different Locatio
 
 Commercial Buildings, Transit-NYC Subway, Department Store, Chain Store and Public School individually rank around 2 to 2.5% of the total Crimes Reported.  
 
-The second plot shows the Place of Crime Distribtion across different Crime Categories. It is observed that for Felony and Misdeamnor the top places of Crimes are similar. For violations, however the crimes reported in Residence-Apt House is more than those on street. Also, some of the other places of Crime which figure under violations Public School, Grocery etc, suggestive of traffic violations.    
+The second plot shows the Place of Crime Distribution across different Crime Categories. It is observed that for Felony and Misdemeanor, the top places of Crimes are similar. For violations, however the crimes reported in Residence-Apt House is more than those on street. Also, some of the other places of Crime which figure under violations for example Public School, Grocery etc, suggest those  of traffic violations. 
+
+ 
 
 -- Old inference below, remove later ----
 
 
-1) This graph is messed up in order, i cant get the order right for "violation" category
+1) This graph is messed up in order, i cant get the order right for "violation" category < Done > 
 2) Shows top locations for crime under different categories
 3) Top 3 locations are almost same for call categories, more violations in Apt-Residence than Street. 
 4) Also observed violations could be parking / traffic violations, typical locations include Public school, Diners/Restaurants, grocery etc 
+
+
+## Top Crime Categories   
+
+The classification of crimes reported in NYC is based on two main factors.    
+1) The level or the seriousness of the crime, which are Violation, Misdemeanor, Felony   
+2) The other classification is based on the category of the crime. At the time of this report data, there are broadly 70 different types of Offense Catgories. Each of these offense categories are further divided into internal offense categories. Based on the severity of the internal offense category, the offense category can either be a violation or misdemeanor or felony. For Example, Offense Category "Dangerous Drugs can either be a Felony(Internal offense Category - "Marijuana Sale") or a Misdemeanor( Internal Offense Category -> "Marijuana Possession")      
+
+The following plots make an attempt to find out the answers for the following questions:     
+1) What are the top 15 Offense Categories ?   
+2) Are the top offense Categories similar for all the boroughs ?   
+3) Are there any trends over time for the top offense categories ?   
+
+
+## To find Top 15 Crime Categories
+```{r fig.height=4, fig_width = 6}
+  crime_top <- crime_df %>% 
+                  filter(OffenseDesc!="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  mutate(rel_freq = count/sum(count)) %>%
+                  top_n(n=15, wt=count)
+
+  ggplot(crime_top, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+    geom_col() + 
+    coord_flip() +
+    xlab("Offense Category") +
+    ylab("Crime Count Frequency") +
+    ggtitle(" Top Crime Offense Categories")
+  
+
+```
+
+The above plot summarizes the top offense categories in NYC. Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs figure among the top offense categories. Since the offense Categories are classified at very broad level, it would make more sense to perform detailed analysis on Internal Offense Categories.  
+
+** Inference **  
+1) The top crime categories are Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs  
+2) Do we need to find some distribution for these again ??   
+3) What is miscellaneous Penal LAw ?  
+
+
+## Boro, Juris, Crime Categories
+```{r fig.height=10, fig.width=16}
+                  #group_by(Boro,Jurisdiction,OffenseDesc) %>% 
+                  #mutate(count=n()) %>%
+  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+  crime_sort <- crime_df %>% 
+                  filter(Boro != "", Jurisdiction !="", (OffenseDesc == top_ofns))%>%
+                  group_by(Boro,Level,OffenseDesc) %>% 
+                  summarize(Freq=n())
+  
+  crime_sort$TOP_OFFENSE = crime_sort$OffenseDesc[,drop=TRUE]
+  
+  ## I tried changing the code, but I like the above 
+  crime_sort_1 <- crime_df %>%
+                  filter(Boro != "", OffenseDesc != "") %>%
+                  group_by(Boro,OffenseDesc) %>% 
+                  summarize(count=n())  %>%
+                  ungroup() %>%
+                  group_by(Boro) %>%
+                  top_n(n=6, wt=count)
+                    
+  
+  #doubledecker(OffenseDesc~Boro, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
+  mosaic(TOP_OFFENSE~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
+  
+  
+  #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
+  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=Level)) +
+    geom_col() +
+    facet_wrap(~ Boro) +
+    coord_flip()
+```
+
+** Inference from Mosaic Plot **   
+1) How the Top crimes are distributed across Boroughs ?  
+2) Drugs are more in Bronx compared to Queens  
+3) Manhattan tops for Petit Larceny and Grand Larceny   
+4) In staten Island, Harrasment tops among other crimes in staten island  
+5) From the stacked bar graphs, it shows some comparisions easier. For example in mosaic it is difficult to compare areas of distribution when widths of bars are not same. However Here it clearly shows comparisons among boroughs for each crime as well within boroughs for different crimes   
+6) It also shows that for Drugs and Criminal mischief the crime category can either be Misdemeanor or Felony depending on severity. In both cases, number of crimes as misdemeanor is more than felony.  
+
+
+
+
+** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
+
+
+
+## Time Trend of Top OFFENSE Category 
+
+```{r fig.height=8, fig.width=16}
+    top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+    crime_time_top_ofns <- crime_df %>%
+                            filter(year(DateStart)>2005, (OffenseDesc == top_ofns)) %>%
+                            group_by(Date=floor_date(DateStart, "year"),OffenseDesc) %>%
+                            summarize(count=n()) 
+    
+    crime_time_top_ofns <- crime_time_top_ofns %>%
+                            group_by(OffenseDesc) %>%
+                            mutate(rel_count = count*100/count[1])
+
+    ggplot(crime_time_top_ofns, aes(Date,count, color = OffenseDesc))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Offense Catgory VS year")
+
+    ggplot(crime_time_top_ofns, aes(Date,rel_count, color = OffenseDesc))+
+          geom_line() +
+          ggtitle("Trend/Rate of Crimes in Each Offense Catgory - Common Starting Point VS year")
+```  
+
+**Inference **  
+1) The first graph captures the trend of crimes over the years 2006-2016.   
+2) The ranks of top crimes have not changed from 2006 o 2016, except in 2013, we see a dip in number of crimes of category "criminal mischief" , similar dip is observed in "Grand Larceny" in 2010 
+3) To compare the trends of crime by fixing them to a common starting point, we observe that the "dangerous Drugs" category has dipped down drasticaly when compared to other crimes.   
+4) Harrasment has shown an increase in the last five years.  
+5) There is slight increase in Criminal Mischief during the period 2013-2015
+6) There is a sudden increase in Grand Larceny and Petite Larceny from 2011 to 2013, more than other crimes  
+
+## Crime PD top 
+
+```{r fig.height=10, fig.width=20}
+    crime_pd_top_all_boro <- crime_df %>%
+                      filter(!is.na(Boro)) %>%
+                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc) && OffenseDesc != "" && Boro != ""  ) %>%
+                      group_by(Boro,OffenseDesc, IntOffenseDesc) %>%
+                      summarize(count = n()) %>%
+                      ungroup() %>%
+                      group_by(Boro) %>%
+                      top_n(n=6, wt=count) %>%
+                      arrange(Boro, desc(count))
+                    
+
+    crime_pd_top <- crime_df %>%
+                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc)  && (Boro != "")) %>%
+                      group_by(IntOffenseDesc) %>%
+                      summarize(count = n()) %>%
+                      top_n(n=20, wt=count)
+ 
+
+  ggplot(crime_pd_top, aes(reorder(IntOffenseDesc,count), count)) +
+    geom_col() +
+    coord_flip()
+
+  ggplot(crime_pd_top_all_boro, aes(reorder(IntOffenseDesc,count),count, fill=OffenseDesc)) +
+    geom_col() +
+    coord_flip() + 
+    facet_wrap(~Boro, scales="free" , ncol=2)
+```
+ **Inference**  
+ Interesting to observe the internal classification of top crimes levels   
+  1) These plots are just to analyse the sub categories of Crime/ Offense   
+ 2) Petite Larceny is generally from stores and building   
+ 3) Different levels of Harassment take the top ranks 2-4   
+ 4) Crimes involving Drugs are usually Possession of Marijuana  
+ 5) Not sure if you want to use borough comparisions again   
+ 
+  *total classification of overall crimes (pd_desc) -> 409 * 
+
 
 ## Month and Time and Type of Crime
 
@@ -268,146 +436,6 @@ The second plot shows the Place of Crime Distribtion across different Crime Cate
 **Inference**  
 1) Over the years, the rate for attempted crime category for Felony is reducing much drastically than violation or misdemeanor  
 
-
-## To find Top 10 Crime Categories, mosaic plots building blocks
-```{r fig.height=12, fig_width = 10}
-  crime_top <- crime_df %>% 
-                  filter(OffenseDesc!="") %>%
-                  group_by(OffenseDesc) %>%
-                  summarize(count=n()) %>%
-                  top_n(n=15, wt=count)
-
-  ggplot(crime_top, aes(reorder(OffenseDesc,count), count)) +
-    geom_col() + 
-    coord_flip() +
-    ggtitle(" Top Crime Categories")
-  
-
-```
-
-** Inference **  
-1) The top crime categories are Petit Larceny, Harrasment , Assual, Criminal Mischielf, Grand Larceny , Dangerous Drugs  
-2) Do we need to find some distribution for these again ??   
-3) What is miscellaneous Penal LAw ?  
-
-
-## Boro, Juris, Crime Categories
-```{r fig.height=10, fig.width=16}
-                  #group_by(Boro,Jurisdiction,OffenseDesc) %>% 
-                  #mutate(count=n()) %>%
-  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
-  crime_sort <- crime_df %>% 
-                  filter(Boro != "", Jurisdiction !="", (OffenseDesc == top_ofns))%>%
-                  group_by(Boro,Level,OffenseDesc) %>% 
-                  summarize(Freq=n())
-  
-  crime_sort$TOP_OFFENSE = crime_sort$OffenseDesc[,drop=TRUE]
-  
-  ## I tried changing the code, but I like the above 
-  crime_sort_1 <- crime_df %>%
-                  filter(Boro != "", OffenseDesc != "") %>%
-                  group_by(Boro,OffenseDesc) %>% 
-                  summarize(count=n())  %>%
-                  ungroup() %>%
-                  group_by(Boro) %>%
-                  top_n(n=6, wt=count)
-                    
-  
-  #doubledecker(OffenseDesc~Boro, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
-  mosaic(TOP_OFFENSE~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
-  
-  
-  #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
-  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=Level)) +
-    geom_col() +
-    facet_wrap(~ Boro) +
-    coord_flip()
-```
-
-** Inference from Mosaic Plot **   
-1) How the Top crimes are distributed across Boroughs ?  
-2) Drugs are more in Bronx compared to Queens  
-3) Manhattan tops for Petit Larceny and Grand Larceny   
-4) In staten Island, Harrasment tops among other crimes in staten island  
-5) From the stacked bar graphs, it shows some comparisions easier. For example in mosaic it is difficult to compare areas of distribution when widths of bars are not same. However Here it clearly shows comparisons among boroughs for each crime as well within boroughs for different crimes   
-6) It also shows that for Drugs and Criminal mischief the crime category can either be Misdemeanor or Felony depending on severity. In both cases, number of crimes as misdemeanor is more than felony.  
-
-
-
-
-** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
-
-
-
-## Time Trend of Top OFFENSE Category 
-
-```{r fig.height=8, fig.width=16}
-    top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
-    crime_time_top_ofns <- crime_df %>%
-                            filter(year(DateStart)>2005, (OffenseDesc == top_ofns)) %>%
-                            group_by(Date=floor_date(DateStart, "year"),OffenseDesc) %>%
-                            summarize(count=n()) 
-    
-    crime_time_top_ofns <- crime_time_top_ofns %>%
-                            group_by(OffenseDesc) %>%
-                            mutate(rel_count = count*100/count[1])
-
-    ggplot(crime_time_top_ofns, aes(Date,count, color = OffenseDesc))+
-          geom_line() +
-          ggtitle("Trend/Rate of Crimes in Each Offense Catgory VS year")
-
-    ggplot(crime_time_top_ofns, aes(Date,rel_count, color = OffenseDesc))+
-          geom_line() +
-          ggtitle("Trend/Rate of Crimes in Each Offense Catgory - Common Starting Point VS year")
-```  
-
-**Inference **  
-1) The first graph captures the trend of crimes over the years 2006-2016.   
-2) The ranks of top crimes have not changed from 2006 o 2016, except in 2013, we see a dip in number of crimes of category "criminal mischief" , similar dip is observed in "Grand Larceny" in 2010 
-3) To compare the trends of crime by fixing them to a common starting point, we observe that the "dangerous Drugs" category has dipped down drasticaly when compared to other crimes.   
-4) Harrasment has shown an increase in the last five years.  
-5) There is slight increase in Criminal Mischief during the period 2013-2015
-6) There is a sudden increase in Grand Larceny and Petite Larceny from 2011 to 2013, more than other crimes  
-
-## Crime PD top 
-
-```{r fig.height=10, fig.width=20}
-    crime_pd_top_all_boro <- crime_df %>%
-                      filter(!is.na(Boro)) %>%
-                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc) && OffenseDesc != "" && Boro != ""  ) %>%
-                      group_by(Boro,OffenseDesc, IntOffenseDesc) %>%
-                      summarize(count = n()) %>%
-                      ungroup() %>%
-                      group_by(Boro) %>%
-                      top_n(n=6, wt=count) %>%
-                      arrange(Boro, desc(count))
-                    
-
-    crime_pd_top <- crime_df %>%
-                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc)  && (Boro != "")) %>%
-                      group_by(IntOffenseDesc) %>%
-                      summarize(count = n()) %>%
-                      top_n(n=20, wt=count)
- 
-
-  ggplot(crime_pd_top, aes(reorder(IntOffenseDesc,count), count)) +
-    geom_col() +
-    coord_flip()
-
-  ggplot(crime_pd_top_all_boro, aes(reorder(IntOffenseDesc,count),count, fill=OffenseDesc)) +
-    geom_col() +
-    coord_flip() + 
-    facet_wrap(~Boro, scales="free" , ncol=2)
-```
- **Inference**  
- Interesting to observe the internal classification of top crimes levels   
-  1) These plots are just to analyse the sub categories of Crime/ Offense   
- 2) Petite Larceny is generally from stores and building   
- 3) Different levels of Harassment take the top ranks 2-4   
- 4) Crimes involving Drugs are usually Possession of Marijuana  
- 5) Not sure if you want to use borough comparisions again   
- 
-  *total classification of overall crimes (pd_desc) -> 409 * 
 
 
 ## Crimes in parks Analysis 
