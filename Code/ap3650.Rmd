@@ -27,9 +27,6 @@ library(lubridate)
 library(RColorBrewer)
 
 
-#fread("NYPD_Complaint_Data_Historic.csv",na.strings="",colClasses = c(ParkName="c",HADEVELOPT="c"))->crime_df
-#crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="")
-#crime_df_1 <- read.csv("NYPD_Complaint_Data_Historic.csv", header=TRUE)
 
 ## Copied from rj2168.rmd for uniform read and variable names 
 
@@ -73,31 +70,52 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
 
 ## Type of Offense  VS Place of Offense
 
-```{r fig.height=10, fig.width=16}
-  ggplot(crime_df,aes(PremDesc)) +
-    geom_bar() +
-    facet_wrap(~Level) +
-    coord_flip() + 
-    ggtitle("Crime Category Vs Place of Crime")
-  
+```{r fig.height=6, fig.width=10}
   
   crime_place <- crime_df %>%
-                 filter(!is.na(PremDesc)) %>%
+                 filter(!is.na(PremDesc),Level !="") %>%
+                 group_by(PremDesc) %>%
+                 summarize(count=n()) %>%
+                 top_n(n=10, wt=count) %>%
+                 mutate(rel_freq = count/sum(count))
+
+  
+  ggplot(crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    ylab("Crime Count Frequency") +
+    xlab("Place of Crime - Premises") +
+    ggtitle(" Top Ten Crime Premises")
+  
+
+  crime_place_2 <- crime_df %>%
+                 filter(!is.na(PremDesc),Level !="") %>%
                  group_by(Level,PremDesc) %>%
                  summarize(count=n()) %>%
                  top_n(n=10, wt=count) %>%
-                 arrange(Level, count) 
-  
-  ggplot(crime_place, aes(fct_reorder(PremDesc, count), count , fill=Level)) +
+                 mutate(rel_freq = count/sum(count))
+
+  ggplot(crime_place_2, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
     geom_bar(stat="identity") +
     facet_wrap(~Level, scales="free") +
-    coord_flip() + 
-    ggtitle("Crime Category Vs Place of Crime for Different Categories")
+    coord_flip() +
+    ylab("Crime Count Frequency") +
+    xlab("Place of Crime - Premises") +
+    ggtitle(" Place of Crime Distribution Across Crime Categories")
   
 
 ```
 
-**Observations**   
+**Observations**    
+The first plot shows the overall top 10 Locations of Crimes in different Locations in NYC. It is observed that about 40% of the total Crimes are reported on the "Street". The next 3 top locations reported are Residence-Apt House, Residence-House and Residence - Public Housing. However if we consider all these groups of Residence as one category, they cumulatively add up to more than 45% of the total crimes reported. In short, we can fairly assume that around 85% of crimes reported in NYC are either on the "Streets" or "Residence" Premises.   
+
+Commercial Buildings, Transit-NYC Subway, Department Store, Chain Store and Public School individually rank around 2 to 2.5% of the total Crimes Reported.  
+
+The second plot shows the Place of Crime Distribtion across different Crime Categories. It is observed that for Felony and Misdeamnor the top places of Crimes are similar. For violations, however the crimes reported in Residence-Apt House is more than those on street. Also, some of the other places of Crime which figure under violations Public School, Grocery etc, suggestive of traffic violations.    
+
+-- Old inference below, remove later ----
+
+
 1) This graph is messed up in order, i cant get the order right for "violation" category
 2) Shows top locations for crime under different categories
 3) Top 3 locations are almost same for call categories, more violations in Apt-Residence than Street. 
