@@ -5,8 +5,9 @@ account: rjl2168
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 311774
-bundleId: 1294744
+bundleId: 1328485
 url: https://rjl2168.shinyapps.io/CrimeDataNYCApp/
-when: 1522405985.53823
+when: 1524182302.31181
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: app_git.R|nyc_precinct.geojson|Precincts.RData

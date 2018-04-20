@@ -21,3 +21,7 @@ save(NycAppData, file = "NycAppData.RData")
 
 #This .RData file can now be loaded int the application with the command:
 # load("NycAppData.RData")
+
+#Generate .RData file for NYC precincts using geojson data file
+nyc_precincts <- geojsonio::geojson_read("nyc_precinct.geojson", what = "sp")
+save(nyc_precincts, file = "Precincts.RData")
