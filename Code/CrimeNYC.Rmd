@@ -92,7 +92,7 @@ There are total of 655 complaints missing DateStart, of which,
 ```{r}
 #get the reporting dates of cases with starting dates missing and boxplot of cases with points overlayed
 crime_df%>%select(DateStart,DateReport)%>%filter(is.na(DateStart))%>%select(DateReport)->tmp1
-tmp1%>%ggplot()+geom_boxplot(aes(x=1,y=DateReport))+geom_point(aes(x=1,y=DateReport),alpha=0.1)->p1
+ggplot(tmp1,aes(DateReport))+ geom_histogram(bins=120)->p1
 
 #compare pattern of crime Level between all cases vs. cases with missing DateStart
 crime_df%>%select(DateStart,Level)%>%filter(is.na(DateStart))%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp3; nr1=nrow(tmp3)
