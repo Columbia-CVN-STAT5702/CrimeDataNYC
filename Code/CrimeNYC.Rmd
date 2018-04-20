@@ -139,6 +139,9 @@ grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
 * As shown above, the amount of such cases is not large. In our main analysis, we will focus on cases with Datestart after Jan. 1,2000 up until Dec. 31, 2016 in total over 5.57M. Cases with DateStart earlier than Jan. 1, 2000 are totaled 1549.
 \
 \
+
+### -Missing PremDesc
+
 ```{r}
 #get the reporting dates of cases with PremDesc missing and histogram over DateReport
 #crime_df%>%filter(is.na(PremDesc))%>%dplyr::summarise(count=n()) #35198 missing cases
@@ -165,6 +168,8 @@ tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+
 
 grid.arrange(p1,p2,p3,nrow=1)
 ```
+
+\
 * There are 35198 cases missing PremDesc. 
 * Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher freqency in the missing data. 
 * In year 2006, there are much more cases with missing PremDesc than other years. Year 2006 did have more cases overall comparing with other years.  
