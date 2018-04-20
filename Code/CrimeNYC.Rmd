@@ -164,7 +164,6 @@ tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-\
 * There are 35198 cases missing PremDesc. 
 * Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher freqency in the missing data. 
 * In year 2006, there are much more cases with missing PremDesc than other years. Year 2006 did have more cases overall comparing with other years.  
