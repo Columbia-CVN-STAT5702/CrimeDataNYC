@@ -81,8 +81,7 @@ visna(crime_df,sort="b")
 
 * ParkName are given if the event occurred there. Most of the cases doesn't have this vairable mostly becasue it doesn't apply. How much percent of real missing of park place, we don't know.
 
-\
-\
+
 ### -Missing DateStart
 
 There are total of 655 complaints missing DateStart, of which, 
@@ -116,8 +115,6 @@ tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-\
-\
 ### -Errors in DateStart
 
 ```{r fig.height=4,fig.width=4}
@@ -137,8 +134,6 @@ grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
 * There seems to be errors in DateStart. It dated back to Year 1015 which is suspicious. But by referncing to DateReport, 2 dates usually have very close month/date. It seems Year1015 may actually be Year2015 due to a typo. DateEnd also suggests so.
 * The scatterplot of the DateStart vs DateReport did show some strict linear correlation for many cases during some periods.
 * As shown above, the amount of such cases is not large. In our main analysis, we will focus on cases with Datestart after Jan. 1,2000 up until Dec. 31, 2016 in total over 5.57M. Cases with DateStart earlier than Jan. 1, 2000 are totaled 1549.
-\
-\
 
 ### -Missing PremDesc
 
@@ -173,8 +168,6 @@ grid.arrange(p1,p2,p3,nrow=1)
 * There are 35198 cases missing PremDesc. 
 * Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher freqency in the missing data. 
 * In year 2006, there are much more cases with missing PremDesc than other years. Year 2006 did have more cases overall comparing with other years.  
-\
-\
 
 ### -Mismatch between Pct and Boro
 
@@ -233,8 +226,6 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 * OffenseDesc (with missing values) is the description of offense corresponding with key code ClassCode which is complete in the dataset. Code and description map each other and valid OffenseDesc can be infered from a map established from the dataset.  
 
 * The plot above shows missing counts of the ClassCode categories with OffenseDesc originally missing but now retrieved from the map between ClassCode and OffenseDesc.
-\
-\
 
 ### -Missing Geolocation
 
@@ -257,8 +248,7 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 * The 5 geolocation variables have the same missing pattern as expected. So we only need to look at one of them to examine the missing. In the data document, it stated that "to protect victim identities, rape and sex crime offenses are not geocoded". We want to see if the missing of geo variables are mostly related with those crime? Is there a lot of missing for other crimes too?
 
 * The missing in geolocation is obviously not random. When examine the spatial pattern of the crimes, we have to bear in mind that particular crimes will not appear on the map due to missing not at random. 
-\
-\
+
 
 # 4. Main Analysis 
 ```{r}
