@@ -260,6 +260,8 @@ ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme
 totalCnt%>%filter(Year>=2006)%>%ggplot()+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+ylim(2006,2016)+theme(legend.title=element_blank())->p2
 grid.arrange(p1,p2)
 ```
+
+
 * The total frequency over each year has a trend of declining. This may be due to lots of cases occurred over the years haven't been reported yet. It makes sense the later the more cases expected to be reported. But doesnt seem to explain the big decreasing in # of cases reported over the year. Most likely the crime is decreasing over the year!!
 * The big difference between Start and Report in Year 2016 again mostly like is because a lot of cases occurred in Year 2016 haven't been able to be presented in this figure due to span of DateReport cut off at Dec. 31,2016. 
 * Number of Cases with DateStart earlier than Jan. 1, 2000 are very small.
@@ -335,8 +337,8 @@ byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_fli
 ```{r fig.height=4,fig,width=6}
 grid.arrange(p1,p2,p3,p4,nrow=2)
 ```
-\
-\
+
+
 * Indeed by barcharting over the months,we see Jun.-Oct. is a high crime season.
 * The spike in Janurary is consistent with the analysis above. 
 * There seemed having a tendency of rounding every 5 day.
@@ -366,8 +368,8 @@ byKYbyPREM_match%>%
   theme(axis.text.x = element_text(size=3,angle = 45, hjust =1), axis.text.y=element_text(size=4),  legend.position="top",legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),
         legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Premises")+xlab("OffenseDesc")
 ```
-\
-\
+
+
 * Doesn't seem having association between crime types and premises.
 \
 \
@@ -396,8 +398,8 @@ byKYbyFRTM_match%>%ggplot(aes(
   theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position="bottom",
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Hour")+xlab("OffenseDesc")
 ```
-\
-\
+
+
 * Do we see any association between time and certain crime? Do see some high density around middle up right area, which is consistent with the barcharting daily cycle.
 \
 \
