@@ -280,7 +280,7 @@ df_Date%>%group_by(DateStart,Level)%>%dplyr::summarise(count=n())%>%ungroup()%>%
 byDateLawMean%>%ggplot()+
   geom_line(aes(DateStart,count,color=Level))+
   geom_line(aes(DateStart,mon_mean,group=Level))+
-  ggtitle("Daily Crime Frequency since 2006 with 30-day running mean")+
+  ggtitle("Daily Crime Frequency since 2000 with 30-day running mean")+
   labs(x="Date",y="Frequency")+theme(legend.title=element_blank())+geom_line(aes(DateStart,count*0+1150))
 
 #Top 9 daily rate falls on Jan 1.
