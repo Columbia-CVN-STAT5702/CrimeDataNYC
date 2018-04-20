@@ -90,9 +90,9 @@ There are total of 655 complaints missing DateStart, of which,
   2. The frequency distrinution of Level shares the same pattern of that from all data.
   3. The frequency distrinution of ClassCode shares the same pattern of that from all data. 
 ```{r}
-#get the reporting dates of cases with starting dates missing and boxplot of cases with points overlayed
+#get the reporting dates of cases with starting dates missing and histogram over DateReport
 crime_df%>%select(DateStart,DateReport)%>%filter(is.na(DateStart))%>%select(DateReport)->tmp1
-tmp1%>%ggplot()+geom_boxplot(aes(x=1,y=DateReport))+geom_point(aes(x=1,y=DateReport),alpha=0.1)->p1
+ggplot(tmp1,aes(DateReport))+ geom_histogram(bins=120)->p1
 
 #compare pattern of crime Level between all cases vs. cases with missing DateStart
 crime_df%>%select(DateStart,Level)%>%filter(is.na(DateStart))%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp3; nr1=nrow(tmp3)
@@ -101,7 +101,7 @@ crime_df%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutat
 tmp5%>%mutate(type=replicate(nr2,"All"))->tmp5
 rbind(tmp3,tmp5)->tmp3tmp5
 tmp3tmp5%>%ggplot(aes(Level,RelFreq))+geom_bar(stat="identity")+scale_x_discrete(label=abbreviate)+
-  coord_flip()+ylab("Level of Offense")+xlab("Relative Frequency")+facet_wrap(~type)->p2
+  coord_flip()+xlab("Level of Offense")+ylab("Relative Frequency")+facet_wrap(~type)->p2
 
 #compare pattern of ClassCode between all cases vs. cases with missing DateStart
 crime_df%>%select(DateStart,ClassCode)%>%filter(is.na(DateStart))%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by(ClassCode)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp2; nrr1=nrow(tmp2)
@@ -110,12 +110,63 @@ crime_df%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by
 tmp4%>%mutate(type=replicate(nrr2,"All"))->tmp4
 rbind(tmp2,tmp4)->tmp2tmp4
 tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+theme(text = element_text(size=5))+
-  coord_flip()+ylab("Offense Classification Code")+xlab("Relative Frequency")+facet_wrap(~type)->p3
+  coord_flip()+xlab("Offense Classification Code")+ylab("Relative Frequency")+facet_wrap(~type)->p3
 
 grid.arrange(p1,p2,p3,nrow=1)
 ```
-\
-\
+
+### -Errors in DateStart
+
+```{r fig.height=4,fig.width=4}
+crime_df%>%select(DateStart,DateEnd,DateReport)->df_3DT
+df_3DT%>%filter(DateStart<=as.Date("1900-01-01"))->df_3DT_Year1900  
+df_3DT%>%filter(DateStart>=as.Date("1900-01-01") & DateStart<=as.Date("1920-01-01"))->df_3DT_Year1900to1920
+df_3DT%>%filter(DateStart>=as.Date("1920-01-01") & DateStart<=as.Date("1960-01-01"))->df_3DT_Year1920to1960
+df_3DT%>%filter(DateStart>=as.Date("1960-01-01") & DateStart<=as.Date("1980-01-01"))->df_3DT_Year1960to1980
+#association between report date and complaint date indicating possible typo in recording the data
+splom(df_3DT_Year1900,varname.cex = .5,axis.text.cex = 0.5,cex=.5,xlab=NULL)->pl1
+splom(df_3DT_Year1900to1920,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl2
+splom(df_3DT_Year1920to1960,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl3
+splom(df_3DT_Year1960to1980,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl4
+grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
+```
+
+* There seems to be errors in DateStart. It dated back to Year 1015 which is suspicious. But by referncing to DateReport, 2 dates usually have very close month/date. It seems Year1015 may actually be Year2015 due to a typo. DateEnd also suggests so.
+* The scatterplot of the DateStart vs DateReport did show some strict linear correlation for many cases during some periods.
+* As shown above, the amount of such cases is not large. In our main analysis, we will focus on cases with Datestart after Jan. 1,2000 up until Dec. 31, 2016 in total over 5.57M. Cases with DateStart earlier than Jan. 1, 2000 are totaled 1549.
+
+### -Missing PremDesc
+
+```{r}
+#get the reporting dates of cases with PremDesc missing and histogram over DateReport
+#crime_df%>%filter(is.na(PremDesc))%>%dplyr::summarise(count=n()) #35198 missing cases
+crime_df%>%select(PremDesc,DateReport)%>%filter(is.na(PremDesc))%>%select(DateReport)->tmp1
+ggplot(tmp1,aes(DateReport))+ geom_histogram(bins=120)->p1
+
+#compare pattern of crime Level between all cases vs. cases with missing PremDesc
+crime_df%>%select(PremDesc,Level)%>%filter(is.na(PremDesc))%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp3; nr1=nrow(tmp3)
+tmp3%>%mutate(type=replicate(nr1,"PremDesc_NA"))->tmp3
+crime_df%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp5; nr2=nrow(tmp5)
+tmp5%>%mutate(type=replicate(nr2,"All"))->tmp5
+rbind(tmp3,tmp5)->tmp3tmp5
+tmp3tmp5%>%ggplot(aes(Level,RelFreq))+geom_bar(stat="identity")+scale_x_discrete(label=abbreviate)+
+  coord_flip()+xlab("Level of Offense")+ylab("Relative Frequency")+facet_wrap(~type)->p2
+
+#compare pattern of ClassCode between all cases vs. cases with missing PremDesc
+crime_df%>%select(PremDesc,ClassCode)%>%filter(is.na(PremDesc))%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by(ClassCode)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp2; nrr1=nrow(tmp2)
+tmp2%>%mutate(type=replicate(nrr1,"PremDesc_NA"))->tmp2
+crime_df%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by(ClassCode)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp4; nrr2=nrow(tmp4)
+tmp4%>%mutate(type=replicate(nrr2,"All"))->tmp4
+rbind(tmp2,tmp4)->tmp2tmp4
+tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+theme(text = element_text(size=10))+
+  coord_flip()+xlab("Offense Classification Code")+ylab("Relative Frequency")+facet_wrap(~type)->p3
+
+grid.arrange(p1,p2,p3,nrow=1)
+```
+
+* There are 35198 cases missing PremDesc. 
+* Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher freqency in the missing data. 
+* In year 2006, there are much more cases with missing PremDesc than other years. Year 2006 did have more cases overall comparing with other years.  
 
 ### -Mismatch between Pct and Boro
 
@@ -174,8 +225,6 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 * OffenseDesc (with missing values) is the description of offense corresponding with key code ClassCode which is complete in the dataset. Code and description map each other and valid OffenseDesc can be infered from a map established from the dataset.  
 
 * The plot above shows missing counts of the ClassCode categories with OffenseDesc originally missing but now retrieved from the map between ClassCode and OffenseDesc.
-\
-\
 
 ### -Missing Geolocation
 
@@ -198,36 +247,29 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 * The 5 geolocation variables have the same missing pattern as expected. So we only need to look at one of them to examine the missing. In the data document, it stated that "to protect victim identities, rape and sex crime offenses are not geocoded". We want to see if the missing of geo variables are mostly related with those crime? Is there a lot of missing for other crimes too?
 
 * The missing in geolocation is obviously not random. When examine the spatial pattern of the crimes, we have to bear in mind that particular crimes will not appear on the map due to missing not at random. 
-\
-\
 
-### -Errors in DateStart
-
-```{r fig.height=4,fig.width=4}
-crime_df%>%select(DateStart,DateEnd,DateReport)->df_3DT
-df_3DT%>%filter(DateStart<=as.Date("1900-01-01"))->df_3DT_Year1900  
-df_3DT%>%filter(DateStart>=as.Date("1900-01-01") & DateStart<=as.Date("1920-01-01"))->df_3DT_Year1900to1920
-df_3DT%>%filter(DateStart>=as.Date("1920-01-01") & DateStart<=as.Date("1960-01-01"))->df_3DT_Year1920to1960
-df_3DT%>%filter(DateStart>=as.Date("1960-01-01") & DateStart<=as.Date("1980-01-01"))->df_3DT_Year1960to1980
-#association between report date and complaint date indicating possible typo in recording the data
-splom(df_3DT_Year1900,varname.cex = .5,axis.text.cex = 0.5,cex=.5,xlab=NULL)->pl1
-splom(df_3DT_Year1900to1920,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl2
-splom(df_3DT_Year1920to1960,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl3
-splom(df_3DT_Year1960to1980,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL)->pl4
-grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
-```
-
-* There seems to be errors in DateStart. It dated back to Year 1015 which is suspicious. But by referncing to DateReport, 2 dates usually have very close month/date. It seems Year1015 may actually be Year2015 due to a typo. DateEnd also suggests so.
-* The scatterplot of the DateStart vs DateReport did show some strict linear correlation for many cases during some periods.
-* As shown above, the amount of such cases is not large. In our main analysis, we will focus on cases with Datestart after Jan. 1,2006 up until Dec. 31, 2016 in total over 5.5M.
-\
-\
 
 # 4. Main Analysis 
-
 ```{r}
-#picking non-missing DateStart and filter only those after "2006-01-01", 5560408 obs.
-crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2006-01-01"))->df_Date
+crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2000)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+
+cbind(rbind(data.frame(Year=2000:2005,Report=NA),totalCntByRD),
+      totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank())->p1
+totalCnt%>%filter(Year>=2006)%>%ggplot()+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+ylim(2006,2016)+theme(legend.title=element_blank())->p2
+grid.arrange(p1,p2)
+```
+
+
+* The total frequency over each year has a trend of declining. This may be due to lots of cases occurred over the years haven't been reported yet. It makes sense the later the more cases expected to be reported. But doesnt seem to explain the big decreasing in # of cases reported over the year. Most likely the crime is decreasing over the year!!
+* The big difference between Start and Report in Year 2016 again mostly like is because a lot of cases occurred in Year 2016 haven't been able to be presented in this figure due to span of DateReport cut off at Dec. 31,2016. 
+* Number of Cases with DateStart earlier than Jan. 1, 2000 are very small.
+\
+\
+```{r}
+#picking non-missing DateStart and filter only those after "2000-01-01", 5560408 obs.
+crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2000-01-01"))->df_Date
 ```
 
 ```{r}
@@ -238,7 +280,7 @@ df_Date%>%group_by(DateStart,Level)%>%dplyr::summarise(count=n())%>%ungroup()%>%
 byDateLawMean%>%ggplot()+
   geom_line(aes(DateStart,count,color=Level))+
   geom_line(aes(DateStart,mon_mean,group=Level))+
-  ggtitle("Daily Crime Frequency since 2006 with 30-day running mean")+
+  ggtitle("Daily Crime Frequency since 2000 with 30-day running mean")+
   labs(x="Date",y="Frequency")+theme(legend.title=element_blank())+geom_line(aes(DateStart,count*0+1150))
 
 #Top 9 daily rate falls on Jan 1.
@@ -247,9 +289,9 @@ byDateLawMean%>%arrange(dplyr::desc(count))%>%filter(count>=count[9])%>%
   ggplot(aes(forcats::fct_reorder(DateStart, count),count))+geom_bar(stat="identity")+coord_flip()+ylab("Top 9 Daily Crime Frequency")+xlab("Date")
 ```
 
-* The crime frequency is decreasing over the years this is because lots of cases occurred over the years haven't reported yet. 
+* The time series of crime frequency is decreasing over the years, consistent with shown in the cleveland dot plots of total count by year.  
 * There are obvious annual variation/cycle. 30-day running mean shows the cycle clearly.
-* There are spikes in the misdemeanor category. The top 9 dates with high frequency are shown in the barchart. They are on January 1 on almost each year from 2006-2016 except 2015 which is actually very close behind. These cases seemed like mistakening assigned an occurrence date as January 1 since by examining the relationships between DateReport,DateStart and DateEnd, they don't seem make much sense comparing with others.
+* There are spikes in the misdemeanor category and also felony category before 2006. The top 9 dates with high frequency are shown in the barchart. They are on January 1 on almost each year from 2000-2016 except 2015 which is actually very close behind. When reported, cases tend to be rounded onto Jan. 1 as occurrence date.
 \
 \
 ```{r}
@@ -295,20 +337,13 @@ byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_fli
 ```{r fig.height=4,fig,width=6}
 grid.arrange(p1,p2,p3,p4,nrow=2)
 ```
-\
-\
+
+
 * Indeed by barcharting over the months,we see Jun.-Oct. is a high crime season.
-* The fake January increasing was due to the errors in the records. 
-\
-\
 * The spike in Janurary is consistent with the analysis above. 
 * There seemed having a tendency of rounding every 5 day.
-\
-\
 * Violation is low during weekends but same during weekdays.
 * Felony and misdemeanor is high on Friday but low on Sunday nad Monday.
-\
-\
 * There is obvious day cycle in the crime occurrence. Early morning has the least crime occurrence while later afternoon has the most crime occurrence.
 \
 \
@@ -333,8 +368,8 @@ byKYbyPREM_match%>%
   theme(axis.text.x = element_text(size=3,angle = 45, hjust =1), axis.text.y=element_text(size=4),  legend.position="top",legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),
         legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Premises")+xlab("OffenseDesc")
 ```
-\
-\
+
+
 * Doesn't seem having association between crime types and premises.
 \
 \
@@ -363,8 +398,8 @@ byKYbyFRTM_match%>%ggplot(aes(
   theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position="bottom",
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Hour")+xlab("OffenseDesc")
 ```
-\
-\
+
+
 * Do we see any association between time and certain crime? Do see some high density around middle up right area, which is consistent with the barcharting daily cycle.
 \
 \
