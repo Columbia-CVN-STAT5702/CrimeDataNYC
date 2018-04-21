@@ -162,45 +162,53 @@ The following plots make an attempt to find out the answers for the following qu
 
 ```
 
-The above plot summarizes the top offense categories in NYC. Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs figure among the top offense categories. Since the offense Categories are classified at very broad level, it would make more sense to perform detailed analysis on Internal Offense Categories.  
+The above plot summarizes the top offense categories in NYC. Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs figure among the top offense categories.  
+In the above plot it is also observed that these top 15 offsense categories among the total 70 offense categories constitute around 80% of all crimes. The difference in relative percentages between successive offense category is only around 1-2%. 
+ 
 
-** Inference **  
+** old Inference below, remove later**  
 1) The top crime categories are Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs  
 2) Do we need to find some distribution for these again ??   
 3) What is miscellaneous Penal LAw ?  
 
 
-## Boro, Juris, Crime Categories
-```{r fig.height=10, fig.width=16}
-                  #group_by(Boro,Jurisdiction,OffenseDesc) %>% 
-                  #mutate(count=n()) %>%
-  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+## Boro Vs Top Crime Categories
+```{r fig.height=8, fig.width=16}
+
+  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAULT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+ 
   crime_sort <- crime_df %>% 
-                  filter(Boro != "", Jurisdiction !="", (OffenseDesc == top_ofns))%>%
-                  group_by(Boro,Level,OffenseDesc) %>% 
-                  summarize(Freq=n())
-  
-  crime_sort$TOP_OFFENSE = crime_sort$OffenseDesc[,drop=TRUE]
-  
-  ## I tried changing the code, but I like the above 
-  crime_sort_1 <- crime_df %>%
-                  filter(Boro != "", OffenseDesc != "") %>%
+                  filter(Boro != "") %>%
+                  filter(OffenseDesc %in% top_ofns) %>%
                   group_by(Boro,OffenseDesc) %>% 
-                  summarize(count=n())  %>%
-                  ungroup() %>%
-                  group_by(Boro) %>%
-                  top_n(n=6, wt=count)
-                    
+                  summarize(Freq=n()) %>%
+                  mutate(rel_freq = Freq/sum(Freq))
+  
+  crime_sort$OffenseDesc <- factor(crime_sort$OffenseDesc)
+  
+  
+  ## I tried changing the code, but I like the above , as it compares borough with top 6 categories 
+  #crime_sort_1 <- crime_df %>%
+  #                filter(Boro != "", OffenseDesc != "") %>%
+  #                group_by(Boro,OffenseDesc) %>% 
+  #                summarize(Freq=n())  %>%
+  #                ungroup() %>%
+  #                group_by(Boro) %>%
+  #                top_n(n=6, wt=Freq)
+  #                  
   
   #doubledecker(OffenseDesc~Boro, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
-  mosaic(TOP_OFFENSE~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
+  mosaic(OffenseDesc~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
   
   
   #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
-  ggplot(crime_sort, aes(TOP_OFFENSE,Freq, fill=Level)) +
+  ggplot(crime_sort, aes(OffenseDesc,Freq)) +
     geom_col() +
+    ylab("Offense Count") +
+    xlab("Offense Description") +
     facet_wrap(~ Boro) +
-    coord_flip()
+    coord_flip() +
+    ggtitle(" Top Offense Categories Distribution in Different Boroughs")
 ```
 
 ** Inference from Mosaic Plot **   
@@ -214,13 +222,13 @@ The above plot summarizes the top offense categories in NYC. Petit Larceny, Harr
 
 
 
-** The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
+** <Old inference for old graph) The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
 
 
 
 ## Time Trend of Top OFFENSE Category 
 
-```{r fig.height=8, fig.width=16}
+```{r fig.height=8, fig.width=10}
     top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
     crime_time_top_ofns <- crime_df %>%
                             filter(year(DateStart)>2005, (OffenseDesc == top_ofns)) %>%
@@ -242,13 +250,16 @@ The above plot summarizes the top offense categories in NYC. Petit Larceny, Harr
 
 **Inference **  
 1) The first graph captures the trend of crimes over the years 2006-2016.   
-2) The ranks of top crimes have not changed from 2006 o 2016, except in 2013, we see a dip in number of crimes of category "criminal mischief" , similar dip is observed in "Grand Larceny" in 2010 
+2) The ranks of top crimes have not changed from 2006 to 2016, except in 2013, we see a dip in number of crimes of category "criminal mischief" , similar dip is observed in "Grand Larceny" in 2010 
 3) To compare the trends of crime by fixing them to a common starting point, we observe that the "dangerous Drugs" category has dipped down drasticaly when compared to other crimes.   
 4) Harrasment has shown an increase in the last five years.  
 5) There is slight increase in Criminal Mischief during the period 2013-2015
 6) There is a sudden increase in Grand Larceny and Petite Larceny from 2011 to 2013, more than other crimes  
 
-## Crime PD top 
+## Crime PD top   
+
+
+Since the offense Categories are classified at very broad level, it would make more sense to perform analysis on Internal Offense Categories. 
 
 ```{r fig.height=10, fig.width=20}
     crime_pd_top_all_boro <- crime_df %>%
@@ -289,6 +300,51 @@ The above plot summarizes the top offense categories in NYC. Petit Larceny, Harr
   *total classification of overall crimes (pd_desc) -> 409 * 
 
 
+## Crimes in parks Analysis 
+
+```{r fig.height=16, fig.width = 16}
+  crime_parks <- crime_df %>% 
+                  filter(Boro!="",ParkName!="",Level!="") %>%
+                  group_by(Boro,ParkName,Level) %>%
+                  summarize(count=n())
+
+  #crime_parks <- crime_parks %>%
+  #                arrange(desc(count))
+  
+ crime_pk <- crime_parks %>% 
+                 group_by(Boro) %>%
+                 top_n(n=10, wt=count)
+ 
+  crime_parks_1 <- crime_df %>% 
+                  filter(Boro!="",ParkName!="",OffenseDesc!="") %>%
+                  group_by(Boro,ParkName,OffenseDesc) %>%
+                  summarize(count=n())
+ 
+ crime_pk_1 <- crime_parks_1 %>% 
+                 group_by(Boro) %>%
+                 top_n(n=10, wt=count) %>%
+                 arrange(Boro,desc(count))
+ 
+  getPalette = colorRampPalette(brewer.pal(18, "Set1"))
+  
+  ggplot(crime_pk_1 ,aes(reorder(ParkName,count), count, fill=OffenseDesc)) +
+    geom_col() + 
+    facet_wrap(~Boro, ncol=1, scales="free_y") + 
+    scale_fill_manual(values = getPalette(18)) +
+    # scale_fill_brewer(palette="Set3") +
+    coord_flip()
+  
+  ggplot(crime_pk_1 ,aes(reorder(ParkName,count),  count, fill=OffenseDesc)) +
+    geom_col() + 
+    facet_wrap(~Boro, ncol=1, scales="free") +
+    scale_fill_manual(values = getPalette(18)) +
+    coord_flip()
+```
+
+** Inference **  
+1) Most parks in Bronx have crimes related to Drugs 
+2) Drugs does not figure among the top crimes in Cental park in Manhatan, where as other parks of Manhatan have Drugs as one of their top category  
+3) For the parks in Queens, Drugs does not figure as top crimes in any of the parks
 ## Month and Time and Type of Crime
 
 ```{r fig.height = 10, fig.width=10}
@@ -438,55 +494,10 @@ The above plot summarizes the top offense categories in NYC. Petit Larceny, Harr
 
 
 
-## Crimes in parks Analysis 
-
-```{r fig.height=16, fig.width = 16}
-  crime_parks <- crime_df %>% 
-                  filter(Boro!="",ParkName!="",Level!="") %>%
-                  group_by(Boro,ParkName,Level) %>%
-                  summarize(count=n())
-
-  #crime_parks <- crime_parks %>%
-  #                arrange(desc(count))
-  
- crime_pk <- crime_parks %>% 
-                 group_by(Boro) %>%
-                 top_n(n=10, wt=count)
- 
-  crime_parks_1 <- crime_df %>% 
-                  filter(Boro!="",ParkName!="",OffenseDesc!="") %>%
-                  group_by(Boro,ParkName,OffenseDesc) %>%
-                  summarize(count=n())
- 
- crime_pk_1 <- crime_parks_1 %>% 
-                 group_by(Boro) %>%
-                 top_n(n=10, wt=count) %>%
-                 arrange(Boro,desc(count))
- 
-  getPalette = colorRampPalette(brewer.pal(18, "Set1"))
-  
-  ggplot(crime_pk_1 ,aes(reorder(ParkName,count), count, fill=OffenseDesc)) +
-    geom_col() + 
-    facet_wrap(~Boro, ncol=1, scales="free_y") + 
-    scale_fill_manual(values = getPalette(18)) +
-    # scale_fill_brewer(palette="Set3") +
-    coord_flip()
-  
-  ggplot(crime_pk_1 ,aes(reorder(ParkName,count),  count, fill=OffenseDesc)) +
-    geom_col() + 
-    facet_wrap(~Boro, ncol=1, scales="free") +
-    scale_fill_manual(values = getPalette(18)) +
-    coord_flip()
-```
-
-** Inference **  
-1) Most parks in Bronx have crimes related to Drugs 
-2) Drugs does not figure among the top crimes in Cental park in Manhatan, where as other parks of Manhatan have Drugs as one of their top category  
-3) For the parks in Queens, Drugs does not figure as top crimes in any of the parks
 
 ## trial on ggmap
 ```{r}
-  library(ggmap)
+  #library(ggmap)
 
   #NYC <- get_map(location = "new york city",  color = "bw", zoom = 15, source = "google")
   #ggmap(NYC)
