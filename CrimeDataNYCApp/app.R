@@ -11,14 +11,10 @@ library(plotly)
 library(DT)
 library(lubridate)
 library(ggplot2)
-
 library("sp")
 library("rgdal")
 # library("maptools")
 library("KernSmooth")
-
-
-
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(theme = shinytheme("cosmo"),
@@ -43,18 +39,17 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
         conditionalPanel(condition="input.tabselected==2",
                          uiOutput("dateRangeSelect"),
                          uiOutput("y_var"),
-                         uiOutput("color_var"))
-        
-        #plotOutput("hist")
-        
+                         uiOutput("color_var"),
+                         dataTableOutput("SummaryTable"))
         
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("Map", value = 1, leafletOutput("NycMap"),leafletOutput("NycDensityMap")),
-                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=1600), dataTableOutput("SummaryTable")),
+                    tabPanel("Map", value = 1, leafletOutput("NycPointMap"),leafletOutput("NycDensityMap")),
+                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=800)),
+                    tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
                     id = "tabselected")
         
       )
@@ -63,7 +58,7 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
 
 #Load the data files for the application
 load("NycAppData.RData")
-#load("Precincts.RData")
+load("Precincts.RData")
 
 #Server Function
 server <- function(input, output) {
@@ -105,51 +100,67 @@ server <- function(input, output) {
   
   #*************************************  
   #Render input UI when on the Plot tab
+  # output$dateRangeSelect <- renderUI({
+  #   dateRangeInput(inputId = "dateRange",
+  #                  label = "Select Date Range",
+  #                  start = "06-01-2012",
+  #                  end = "06-30-2012",
+  #                  min = "01-01-2006",
+  #                  max = "12-31-2016")
+  # })
+
   output$dateRangeSelect <- renderUI({
-    dateRangeInput(inputId = "dateRange",
-                   label = "Select Date Range",
-                   start = "06-01-2012",
-                   end = "06-30-2012",
-                   min = "01-01-2006",
-                   max = "12-31-2016")
+    sliderInput(inputId = "dateRange", 
+                label = "Choose Date Range:",
+                min = as.Date("2006-01-01"), 
+                max = as.Date("2016-12-31"),
+                value = c(as.Date("2010-01-01"), as.Date("2012-12-31")))
   })
-  
+
   output$y_var <- renderUI({
     selectInput(inputId = "y",
-                label = "Select Y-axis",
+                label = "Primary Variable",
                 choices = c("Level", "Boro", "Pct"),
                 selected = "Pct")
   })
   
   output$color_var <- renderUI({
     selectInput(inputId = "clr",
-                label = "Select Alternate Variable",
+                label = "Secondary Variable",
                 choices = c("Level", "Boro", "Pct"),
                 selected = "Level")
   })
   #*************************************  
+
+  #*************************************
+  #Render Histogram in Sidebar Panel (Placeholder)
+  output$hist <- renderPlot({
+    hist(c(1:19))
+  })
+  #*************************************
+
+  #****************************************************************************
+  #****************************************************************************
+  #MAPS TAB
+  #****************************************************************************
+  #****************************************************************************
   
   #*************************************  
   #Reactive expressions for Map Tab
   points <- reactive({
     req(input$boro, input$startDate)
-    
-   # filtered_data$crime_year <- year(filtered_data$DateReport)
     if (input$boro == "ALL"){
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% drop_na()
     }
     else {
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
     }
-    #cbind(filtered_data$Long, filtered_data$Lat)
     filtered_data
-    
-    #View(filtered_data)
    })
-  
-  
-  
-  output$NycDensityMap = renderLeaflet({
+
+  #*************************************  
+  #Leaflet Plot Density
+  output$NycDensityMap <- renderLeaflet({
     req(points())
    
     #View(points())
@@ -178,23 +189,15 @@ server <- function(input, output) {
     
   })
   
-  
-  output$NycMap = renderLeaflet({
+  #*************************************  
+  #Leaflet Plot Points
+  output$NycPointMap <- renderLeaflet({
     req(points())
     labs <- lapply(seq(nrow(points())), function(i) {
       paste0( '<p>', points()[i, "Level"], '<p></p>', 
               points()[i, "Pct"], ', ', 
               points()[i, "OffenseDesc"],'</p><p>' ) 
     })
-    
-    output$hist <- renderPlot({
-    
-      #req(filtered_data)
-      
-      #ggplot(filtered_data,ase())
-   hist(c(1:19))
-    })
-    
     
     leaflet(data = points()) %>%
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE)) %>%
@@ -212,34 +215,55 @@ server <- function(input, output) {
                                       "font-size" = "14px",
                                       "border-color" = "rgba(0,0,0,0.5)")),
         clusterOptions = markerClusterOptions())
-    
-    
-  
-    
   })
-  
-  #*************************************  
-  
+  #*************************************
+
+  #****************************************************************************
+  #****************************************************************************
+  #PLOTS TAB
+  #****************************************************************************
+  #****************************************************************************
+
   #*************************************  
   #Reactive Expressions for Plot Tab
   crime_data_filt <- reactive({
     req(input$dateRange)
-    NycAppData %>% filter(DateStart >= input$dateRange[1] & DateStart <= input$dateRange[2])
+    NycAppData %>% filter(DateStart >= input$dateRange[1] & DateStart <= input$dateRange[2]) %>% drop_na()
   })
   
   output$DataPlot <- renderPlotly({
     req(crime_data_filt())
     crimeSummary <- crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
-    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = input$y, y = "Count", fill = input$clr)) + geom_col() + coord_flip() + labs(y = "Crime Incidents"))
+    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = "reorder(eval(as.name(input$y)), Count, sum)", y = "Count", fill = input$clr)) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"))
     p$elementId <- NULL
     p
   })
-  
-  
+
   output$SummaryTable = renderDataTable({
     req(crime_data_filt())
-    crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
+    if (input$y != input$clr) {
+      crime_data_summary <- count(crime_data_filt(), eval(as.name(input$y)), eval(as.name(input$clr)))
+      names(crime_data_summary) <- c(input$y, input$clr, "Count")
+      crime_data_summary %>% group_by_(input$y) %>% mutate(sum1 = sum(Count)) %>% arrange(desc(sum1), desc(eval(as.name(input$y)))) %>% select(-sum1)
+    } else {
+      crime_data_filt() %>% group_by_(input$y) %>% summarize(Count = n()) %>% arrange(-Count)
+    }
   })
+  #*************************************  
+  
+  #****************************************************************************
+  #****************************************************************************
+  #PRECINCT MAPS TAB (Temporary - should be incorporated in MAPS tab)
+  #****************************************************************************
+  #****************************************************************************
+  
+  output$NycPrecinctMap <- renderLeaflet({
+    leaflet(nyc_precincts) %>%
+      addTiles() %>%
+      addPolygons(stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.3, fillColor = "blue", label = ~paste0("Pct: ", formatC(nyc_precincts@data[["Precinct"]])))
+  })
+  
+  
 }
 
 # Run the application 
