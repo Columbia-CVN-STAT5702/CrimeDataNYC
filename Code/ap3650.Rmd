@@ -173,7 +173,7 @@ In the above plot it is also observed that these top 15 offsense categories amon
 
 
 ## Boro Vs Top Crime Categories
-```{r fig.height=8, fig.width=16}
+```{r fig.height=8, fig.width=12}
 
   top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAULT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
  
@@ -198,9 +198,14 @@ In the above plot it is also observed that these top 15 offsense categories amon
   #                  
   
   #doubledecker(OffenseDesc~Boro, data=crime_sort, gp = gpar(fill = c("grey90", "red")))
-  mosaic(OffenseDesc~Boro, direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
+  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(45,0,0, 0)), crime_sort)
   
   
+```
+
+In the above mosaic plot it is easier to compare the top offense distribution within each borough, however to compare acorss borouhs, the stacked bar charts as below would be more useful. 
+
+```{r fig.height=8, fig.width=12}
   #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
   ggplot(crime_sort, aes(OffenseDesc,Freq)) +
     geom_col() +
@@ -216,10 +221,35 @@ In the above plot it is also observed that these top 15 offsense categories amon
 2) Drugs are more in Bronx compared to Queens  
 3) Manhattan tops for Petit Larceny and Grand Larceny   
 4) In staten Island, Harrasment tops among other crimes in staten island  
-5) From the stacked bar graphs, it shows some comparisions easier. For example in mosaic it is difficult to compare areas of distribution when widths of bars are not same. However Here it clearly shows comparisons among boroughs for each crime as well within boroughs for different crimes   
-6) It also shows that for Drugs and Criminal mischief the crime category can either be Misdemeanor or Felony depending on severity. In both cases, number of crimes as misdemeanor is more than felony.  
+5) From the stacked bar graphs, it shows some comparisions easier. For example in mosaic it is difficult to compare areas of distribution when widths of bars are not same. However Here it clearly shows comparisons among boroughs for each crime as well within boroughs for different crimes     
+
+The above plot shows distribution of top offense categories in different boroughs. But we were curious to know if these were really the top offense category for each borough or if there stood out other offsenses which were more seen in one borough but not in the other. To analyse if top offenses varied for each borough, we plotted the following plot. We also included the crime levels to know the severity  of these top offense categories. 
 
 
+```{r fig.height=8, fig.width=16}
+crime_boro_top <- crime_df %>% 
+                  filter(Boro !="", OffenseDesc !="" , Level != "") %>%
+                  group_by(Boro, Level, OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  ungroup() %>%
+                  group_by(Boro) %>%
+                  mutate(rel_freq = count/sum(count)) %>%
+                  top_n(n=6, wt=rel_freq) 
+
+ggplot(crime_boro_top, aes(OffenseDesc, rel_freq, fill= Level)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~Boro, scales="free") +
+  xlab("Offense Description") + 
+  ylab("Offense Count") +
+  ggtitle("Top Offense in Each Borough")
+
+```
+  
+ Using the above plot, we observe that the top offenses for each borough vary little differently. For Manhattan and Brooklyn the top offense distribution is similar to that of NYC taken as whole. None of the top offenses exceeed more than 20% of total crimes for each borough except Petite Larceny in Manhattan. The other top offense featured in Bronx, Queens and Staten Island is Offense Against Pub Ord Sensibility.  
+ 
+
+Next, it would be interesting to analyse the trend of top offenses in each borough over the years. 
 
 
 ** <Old inference for old graph) The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
@@ -228,7 +258,9 @@ In the above plot it is also observed that these top 15 offsense categories amon
 
 ## Time Trend of Top OFFENSE Category 
 
-```{r fig.height=8, fig.width=10}
+```{r fig.height=6, fig.width=6}
+
+
     top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
     crime_time_top_ofns <- crime_df %>%
                             filter(year(DateStart)>2005, (OffenseDesc == top_ofns)) %>%
