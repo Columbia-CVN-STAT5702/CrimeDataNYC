@@ -1,7 +1,7 @@
 ---
-title: "Initial Plot Ideas"
+title: "Plot Ideas for Meteorological and Lunar Relationships"
 author: "Rich Lavery"
-date: "April 15, 2018"
+date: "April 21, 2018"
 output: html_document
 ---
 
@@ -145,13 +145,3 @@ ggplot(data_pct, aes(reorder(Pct, count), count)) + geom_bar(stat = "identity") 
 ```
 
 
-## Can we find a relationship between the level of the offense and bororgh it occured in?  For example, are fellonies more of less prevalent in Brooklyn as compared to the other boroughs?
-
-```{r, fig.width = 10, fig.height = 8}
-#Plot mosaic of the Category of crime with bororgh
-data1 <- crime_df %>% select(Level, Boro) %>% filter(Boro != "")
-counts <- data1 %>% group_by(Boro, Level) %>% summarize(Freq=n())
-vcd::mosaic(Level ~ Boro, counts, direction = c("v", "h"), rot_labels=c(90,90,0,0))
-```
-
-### Our mosaic plot shows little or no relationship between the level of the offense and the borough in question.  

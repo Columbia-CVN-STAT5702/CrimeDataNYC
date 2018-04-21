@@ -17,9 +17,6 @@ library("rgdal")
 # library("maptools")
 library("KernSmooth")
 
-
-
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(theme = shinytheme("cosmo"),
 #ui <- fluidPage(theme = shinytheme("slate"),
@@ -43,7 +40,8 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
         conditionalPanel(condition="input.tabselected==2",
                          uiOutput("dateRangeSelect"),
                          uiOutput("y_var"),
-                         uiOutput("color_var"))
+                         uiOutput("color_var"),
+                         dataTableOutput("SummaryTable"))
         
       ),
       
@@ -51,7 +49,7 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
       mainPanel(
         tabsetPanel(type = "tabs",
                     tabPanel("Map", value = 1, leafletOutput("NycPointMap"),leafletOutput("NycDensityMap")),
-                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=1600), dataTableOutput("SummaryTable")),
+                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=800)),
                     tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
                     id = "tabselected")
         
@@ -229,7 +227,7 @@ server <- function(input, output) {
   output$DataPlot <- renderPlotly({
     req(crime_data_filt())
     crimeSummary <- crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
-    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = input$y, y = "Count", fill = input$clr)) + geom_col() + coord_flip() + labs(y = "Crime Incidents"))
+    p <- ggplotly(ggplot(data = crimeSummary, aes(x = reorder(eval(as.name(input$y)), Count, sum), y = Count, fill = eval(as.name(input$clr)))) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"))
     p$elementId <- NULL
     p
   })
