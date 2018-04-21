@@ -37,14 +37,15 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
                          uiOutput("yearRange"),
                          div(style="display: inline-block;vertical-align:top; width: 100px;",uiOutput("dateSelect")),
                          div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("boroSelect")),
-                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("MapTypeSelect"))),
+                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("MapTypeSelect")),
+                         plotOutput("hist")),
         
         conditionalPanel(condition="input.tabselected==2",
                          uiOutput("dateRangeSelect"),
                          uiOutput("y_var"),
-                         uiOutput("color_var")),
+                         uiOutput("color_var"))
         
-        plotOutput("hist")
+        #plotOutput("hist")
         
         
       ),
@@ -81,7 +82,7 @@ server <- function(input, output) {
   output$yearRange <- renderUI({
     sliderInput("date_range", 
                 "Choose Date Range:", 
-                min = as.Date("2002-01-01"), max = as.Date("2016-12-31"), 
+                min = as.Date("2006-01-01"), max = as.Date("2016-12-31"), 
                 value = c(as.Date("2012-02-25"), Sys.Date())
     )
   })
@@ -113,9 +114,12 @@ server <- function(input, output) {
                    max = "12-31-2016")
   })
   
-  
-  
-
+  output$y_var <- renderUI({
+    selectInput(inputId = "y",
+                label = "Select Y-axis",
+                choices = c("Level", "Boro", "Pct"),
+                selected = "Pct")
+  })
   
   output$color_var <- renderUI({
     selectInput(inputId = "clr",
@@ -135,16 +139,12 @@ server <- function(input, output) {
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% drop_na()
     }
     else {
-      #filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
-     
-      #View(filtered_data$DateReport)
-      filtered_data <- NycAppData %>% filter( filter(DateStart == input$startDate)) %>% filter(Boro == input$boro) %>% drop_na()
-      
-       }
+      filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
+    }
     #cbind(filtered_data$Long, filtered_data$Lat)
     filtered_data
     
-    View(filtered_data)
+    #View(filtered_data)
    })
   
   
@@ -152,9 +152,9 @@ server <- function(input, output) {
   output$NycDensityMap = renderLeaflet({
     req(points())
    
-    View(points())
+    #View(points())
     crimeMap<- points()
-    crimeMap <- crimeMap[!is.na(Long)]
+    #crimeMap <- crimeMap[!is.na(Long)]
     #dat[ , date := as.IDate(date, "%m/%d/%Y")]
    
     ## MAKE CONTOUR LINES
