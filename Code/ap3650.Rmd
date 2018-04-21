@@ -343,7 +343,6 @@ Since the offense Categories are classified at very broad level, it would make m
 
 
 
-
  **Inference**  
  Interesting to observe the internal classification of top crimes levels   
   1) These plots are just to analyse the sub categories of Crime/ Offense. There are total 410 Internal Offense Categories  
@@ -353,6 +352,9 @@ Since the offense Categories are classified at very broad level, it would make m
  5) Not sure if you want to use borough comparisions again   
  
   *total classification of overall crimes (pd_desc) -> 409 * 
+
+
+The NewYork City Crime Report Data has one of it is variables as "Parks" which provides details of names of parks in which crimes have occurred. We were curious to know if there are any specific types of crimes which are common in NYC parks or if they are random in nature. We also tried to explore if crime types in different borough parks were same or different.   
 
 
 ## Crimes in parks Analysis 
@@ -382,12 +384,11 @@ Since the offense Categories are classified at very broad level, it would make m
  
   getPalette = colorRampPalette(brewer.pal(18, "Set1"))
   
-  ggplot(crime_pk_1 ,aes(reorder(ParkName,count), count, fill=OffenseDesc)) +
-    geom_col() + 
-    facet_wrap(~Boro, ncol=1, scales="free_y") + 
-    scale_fill_manual(values = getPalette(18)) +
-    # scale_fill_brewer(palette="Set3") +
-    coord_flip()
+  #ggplot(crime_pk_1 ,aes(reorder(ParkName,count), count, fill=OffenseDesc)) +
+  #  geom_col() + 
+  #  facet_wrap(~Boro, ncol=1, scales="free_y") + 
+  #  scale_fill_manual(values = getPalette(18)) +
+  #  coord_flip()
   
   ggplot(crime_pk_1 ,aes(reorder(ParkName,count),  count, fill=OffenseDesc)) +
     geom_col() + 
@@ -397,12 +398,73 @@ Since the offense Categories are classified at very broad level, it would make m
 ```
 
 ** Inference **  
-1) Most parks in Bronx have crimes related to Drugs 
-2) Drugs does not figure among the top crimes in Cental park in Manhatan, where as other parks of Manhatan have Drugs as one of their top category  
-3) For the parks in Queens, Drugs does not figure as top crimes in any of the parks
+1) Most parks in Bronx have crimes related to Drugs  
+2) Drugs does not figure among the top crimes in Cental park in Manhatan, where as other parks of Manhatan have Drugs as one of their top category    
+3) For the parks in Queens, Drugs does not figure as top crimes in any of the parks    
+
+
+
+"Attempted Crime " is another variable in NYC Crime Data Report, which we wanted to explore. We wanted to analyse if there was any simmilarity in crime counts between Attempted Crime and Completed Crime.
+
+## Atempted Crime vs Type of Crime
+```{r fig.height=6, fig.width=6}
+  crime_stat <- crime_df %>%
+                  filter(AtptCptdStatus == "ATTEMPTED" & OffenseDesc !="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  top_n(n=10, wt=count)
+
+  ggplot(crime_stat,aes(reorder(OffenseDesc,count),count)) +
+      geom_col() +
+      coord_flip() +
+      xlab("Attempted Offense Type") +
+      ylab("Crime Count ") +
+      ggtitle("Attempted Crime Status for Different Types of crime")
+  
+  crime_stat_cmtd <- crime_df %>%
+                  filter(AtptCptdStatus == "COMPLETED" & OffenseDesc !="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  top_n(n=10, wt=count)
+
+  ggplot(crime_stat_cmtd,aes(reorder(OffenseDesc,count),count)) +
+      geom_col() +
+      coord_flip() +
+      xlab("Completed Offense Type") +
+      ylab("Crime Count ") +
+      ggtitle("Completed Crime Status for Different Types of crime")
+```
+
+** Inference **  
+1) Total number of offense categories under attempted category is around 55   
+2) Among top crimes in attempted catgeory is Robbery, Burglar, petit larceny, felony assault, grand lacerny
+3) Are these categories the top offense categories too ?   
+4) For completed categories, the top categories are Petit Larceny, Harrasment 2, Assualt 3, criminal mischief, Grand larceny 
+  
+
+## Attempted Crime Trend 
+```{r fig.height=6 , fig.width=6}
+  crime_stat <- crime_df %>%
+                  filter(AtptCptdStatus=="ATTEMPTED" & year(DateStart)>2005 & Level != "") %>%
+                  group_by(Date=floor_date(DateStart,"year"),Level) %>%
+                  summarize(count=n()) %>% 
+                  ungroup() %>%
+                  group_by(Level) %>%
+                  mutate(rel_count = count*100/count[1])
+
+  ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
+    geom_line() +
+    ggtitle("Trend of Attempted Offense  over the years") +
+    xlab("Attempted Crime Rate") +
+    ylab("Time ( Years)")
+
+```
+
+**Inference**  
+1) Over the years, the rate for attempted crime category for Felony is reducing much drastically than violation or misdemeanor  
 ## Month and Time and Type of Crime
 
-```{r fig.height = 10, fig.width=10}
+```{r fig.height = 6, fig.width=6}
   #crime_df <- crime_df %>% drop_na()
   ggplot(crime_df, aes(Level)) +
   geom_bar() +
@@ -417,6 +479,8 @@ Since the offense Categories are classified at very broad level, it would make m
 2) The peak and low hourly variances is consistent across months   
 
 
+
+** Below Are Time Series , which we can choose if needed apart from other plots ** 
 
 ## Time Series - Trend of Crime Rate 
 ```{r}
@@ -496,56 +560,6 @@ Since the offense Categories are classified at very broad level, it would make m
 3. There are blank OFfense category
 4. I dont like this analysis anymore
 
-## Atempted Crime vs Type of Crime
-```{r fig.height=12, fig.width=8}
-  crime_stat <- crime_df %>%
-                  filter(AtptCptdStatus == "ATTEMPTED" & OffenseDesc !="") %>%
-                  group_by(OffenseDesc) %>%
-                  summarize(count=n()) %>%
-                  top_n(n=20, wt=count)
-
-  ggplot(crime_stat,aes(reorder(OffenseDesc,count),count)) +
-      geom_col() +
-      coord_flip() +
-      ggtitle("Attempted Crime Status for Different Types of crime")
-  
-  crime_stat_cmtd <- crime_df %>%
-                  filter(AtptCptdStatus == "COMPLETED" & OffenseDesc !="") %>%
-                  group_by(OffenseDesc) %>%
-                  summarize(count=n()) %>%
-                  top_n(n=20, wt=count)
-
-  ggplot(crime_stat_cmtd,aes(reorder(OffenseDesc,count),count)) +
-      geom_col() +
-      coord_flip() +
-      ggtitle("Completed Crime Status for Different Types of crime")
-```
-
-** Inference **  
-1) Total number of offense categories under attempted category is around 55   
-2) Among top crimes in attempted catgeory is Robbery, Burglar, petit larceny, felony assault, grand lacerny
-3) Are these categories the top offense categories too ?   
-4) For completed categories, the top categories are Petit Larceny, Harrasment 2, Assualt 3, criminal mischief, Grand larceny 
-  
-
-## Attempted Crime Trend 
-```{r}
-  crime_stat <- crime_df %>%
-                  filter(AtptCptdStatus=="ATTEMPTED" & year(DateStart)>2005 & Level != "") %>%
-                  group_by(Date=floor_date(DateStart,"year"),Level) %>%
-                  summarize(count=n()) %>% 
-                  ungroup() %>%
-                  group_by(Level) %>%
-                  mutate(rel_count = count*100/count[1])
-
-  ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
-    geom_line() +
-    ggtitle("Trend of Attempted Offense  over the years")
-
-```
-
-**Inference**  
-1) Over the years, the rate for attempted crime category for Felony is reducing much drastically than violation or misdemeanor  
 
 
 
