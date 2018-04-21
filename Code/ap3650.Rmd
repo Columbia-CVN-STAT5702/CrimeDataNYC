@@ -252,13 +252,17 @@ ggplot(crime_boro_top, aes(OffenseDesc, rel_freq, fill= Level)) +
 Next, it would be interesting to analyse the trend of top offenses in each borough over the years. 
 
 
-** <Old inference for old graph) The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **
+** (Old inference for old graph) The above plot shows something surprising, the categories are not standard, need to research more. For example, dangerous drugs is under Felony as well as Misdemeanor!! **   
 
 
 
-## Time Trend of Top OFFENSE Category 
 
-```{r fig.height=6, fig.width=6}
+
+## Time Trend of Top Offense Category    
+
+
+
+```{r fig.height=6, fig.width=8}
 
 
     top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAUALT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
@@ -273,10 +277,14 @@ Next, it would be interesting to analyse the trend of top offenses in each borou
 
     ggplot(crime_time_top_ofns, aes(Date,count, color = OffenseDesc))+
           geom_line() +
+          xlab("Time ( Years) ") + 
+          ylab("Crime Count") +
           ggtitle("Trend/Rate of Crimes in Each Offense Catgory VS year")
 
     ggplot(crime_time_top_ofns, aes(Date,rel_count, color = OffenseDesc))+
           geom_line() +
+          xlab("Time ( Years) ") + 
+          ylab("Crime Rate") +
           ggtitle("Trend/Rate of Crimes in Each Offense Catgory - Common Starting Point VS year")
 ```  
 
@@ -293,7 +301,26 @@ Next, it would be interesting to analyse the trend of top offenses in each borou
 
 Since the offense Categories are classified at very broad level, it would make more sense to perform analysis on Internal Offense Categories. 
 
-```{r fig.height=10, fig.width=20}
+```{r fig.height=6, fig.width=8}
+    crime_pd_top <- crime_df %>%
+                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc)  && (Boro != "")) %>%
+                      group_by(IntOffenseDesc) %>%
+                      summarize(count = n()) %>%
+                      mutate(rel_freq = count/sum(count)) %>%
+                      top_n(n=10 ,wt=rel_freq)
+ 
+
+  ggplot(crime_pd_top, aes(reorder(IntOffenseDesc,rel_freq), rel_freq)) +
+    geom_col() +
+    coord_flip()+ 
+    ggtitle("Top Internal Offense Category") +
+    xlab("Internal Offense Description") +
+    ylab("Offense Frequency ")
+  
+
+```
+
+```{r fig.height=8, fig.width=16}
     crime_pd_top_all_boro <- crime_df %>%
                       filter(!is.na(Boro)) %>%
                       filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc) && OffenseDesc != "" && Boro != ""  ) %>%
@@ -304,26 +331,22 @@ Since the offense Categories are classified at very broad level, it would make m
                       top_n(n=6, wt=count) %>%
                       arrange(Boro, desc(count))
                     
-
-    crime_pd_top <- crime_df %>%
-                      filter(IntOffenseDesc != "" && !is.na(IntOffenseDesc)  && (Boro != "")) %>%
-                      group_by(IntOffenseDesc) %>%
-                      summarize(count = n()) %>%
-                      top_n(n=20, wt=count)
- 
-
-  ggplot(crime_pd_top, aes(reorder(IntOffenseDesc,count), count)) +
-    geom_col() +
-    coord_flip()
-
   ggplot(crime_pd_top_all_boro, aes(reorder(IntOffenseDesc,count),count, fill=OffenseDesc)) +
     geom_col() +
     coord_flip() + 
-    facet_wrap(~Boro, scales="free" , ncol=2)
+    facet_wrap(~Boro, scales="free" , ncol=2) +
+    ggtitle("Internal Offense Distribution Across Boroughs") +
+    xlab("Internal Offense Description")  +
+    ylab("Crime Count")
+
 ```
+
+
+
+
  **Inference**  
  Interesting to observe the internal classification of top crimes levels   
-  1) These plots are just to analyse the sub categories of Crime/ Offense   
+  1) These plots are just to analyse the sub categories of Crime/ Offense. There are total 410 Internal Offense Categories  
  2) Petite Larceny is generally from stores and building   
  3) Different levels of Harassment take the top ranks 2-4   
  4) Crimes involving Drugs are usually Possession of Marijuana  
