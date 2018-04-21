@@ -11,7 +11,6 @@ library(plotly)
 library(DT)
 library(lubridate)
 library(ggplot2)
-
 library("sp")
 library("rgdal")
 # library("maptools")
@@ -101,25 +100,33 @@ server <- function(input, output) {
   
   #*************************************  
   #Render input UI when on the Plot tab
+  # output$dateRangeSelect <- renderUI({
+  #   dateRangeInput(inputId = "dateRange",
+  #                  label = "Select Date Range",
+  #                  start = "06-01-2012",
+  #                  end = "06-30-2012",
+  #                  min = "01-01-2006",
+  #                  max = "12-31-2016")
+  # })
+
   output$dateRangeSelect <- renderUI({
-    dateRangeInput(inputId = "dateRange",
-                   label = "Select Date Range",
-                   start = "06-01-2012",
-                   end = "06-30-2012",
-                   min = "01-01-2006",
-                   max = "12-31-2016")
+    sliderInput(inputId = "dateRange", 
+                label = "Choose Date Range:",
+                min = as.Date("2006-01-01"), 
+                max = as.Date("2016-12-31"),
+                value = c(as.Date("2010-01-01"), as.Date("2012-12-31")))
   })
-  
+
   output$y_var <- renderUI({
     selectInput(inputId = "y",
-                label = "Select Y-axis",
+                label = "Primary Variable",
                 choices = c("Level", "Boro", "Pct"),
                 selected = "Pct")
   })
   
   output$color_var <- renderUI({
     selectInput(inputId = "clr",
-                label = "Select Alternate Variable",
+                label = "Secondary Variable",
                 choices = c("Level", "Boro", "Pct"),
                 selected = "Level")
   })
@@ -221,20 +228,26 @@ server <- function(input, output) {
   #Reactive Expressions for Plot Tab
   crime_data_filt <- reactive({
     req(input$dateRange)
-    NycAppData %>% filter(DateStart >= input$dateRange[1] & DateStart <= input$dateRange[2])
+    NycAppData %>% filter(DateStart >= input$dateRange[1] & DateStart <= input$dateRange[2]) %>% drop_na()
   })
   
   output$DataPlot <- renderPlotly({
     req(crime_data_filt())
     crimeSummary <- crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
-    p <- ggplotly(ggplot(data = crimeSummary, aes(x = reorder(eval(as.name(input$y)), Count, sum), y = Count, fill = eval(as.name(input$clr)))) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"))
+    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = "reorder(eval(as.name(input$y)), Count, sum)", y = "Count", fill = input$clr)) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"))
     p$elementId <- NULL
     p
   })
 
   output$SummaryTable = renderDataTable({
     req(crime_data_filt())
-    crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
+    if (input$y != input$clr) {
+      crime_data_summary <- count(crime_data_filt(), eval(as.name(input$y)), eval(as.name(input$clr)))
+      names(crime_data_summary) <- c(input$y, input$clr, "Count")
+      crime_data_summary %>% group_by_(input$y) %>% mutate(sum1 = sum(Count)) %>% arrange(desc(sum1), desc(eval(as.name(input$y)))) %>% select(-sum1)
+    } else {
+      crime_data_filt() %>% group_by_(input$y) %>% summarize(Count = n()) %>% arrange(-Count)
+    }
   })
   #*************************************  
   
