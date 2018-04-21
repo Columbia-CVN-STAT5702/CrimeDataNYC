@@ -9,34 +9,53 @@ library(dplyr)
 library(tidyr)
 library(plotly)
 library(DT)
+library(lubridate)
+library(ggplot2)
+
+library("sp")
+library("rgdal")
+# library("maptools")
+library("KernSmooth")
+
+
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(theme = shinytheme("cosmo"),
-   
+#ui <- fluidPage(theme = shinytheme("slate"),
+                
    # Application title
    titlePanel("NYC Crime Data Visualization"),
    
    # Sidebar with a slider input for number of bins 
-   sidebarLayout(
+   sidebarLayout( 
       sidebarPanel(
-        HTML('<p><img src="Columbia.png"/></p>'),
-        conditionalPanel(condition="input.tabselected==1",
-                         uiOutput("dateSelect"),
-                         uiOutput("boroSelect")),
+       # HTML('<p><img src="Columbia.png"/></p>'),
+        
+        
+        conditionalPanel(condition="input.tabselected==1", width="350px",
+                         uiOutput("yearRange"),
+                         div(style="display: inline-block;vertical-align:top; width: 100px;",uiOutput("dateSelect")),
+                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("boroSelect")),
+                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("MapTypeSelect"))),
         
         conditionalPanel(condition="input.tabselected==2",
                          uiOutput("dateRangeSelect"),
                          uiOutput("y_var"),
-                         uiOutput("color_var"))
+                         uiOutput("color_var")),
+        
+        plotOutput("hist")
+        
         
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("Map", value = 1, leafletOutput("NycMap")),
-                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=800), dataTableOutput("SummaryTable")),
+                    tabPanel("Map", value = 1, leafletOutput("NycMap"),leafletOutput("NycDensityMap")),
+                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=1600), dataTableOutput("SummaryTable")),
                     id = "tabselected")
+        
       )
    )
 )
@@ -58,11 +77,28 @@ server <- function(input, output) {
               max = "12-31-2016")
   })
   
+  
+  output$yearRange <- renderUI({
+    sliderInput("date_range", 
+                "Choose Date Range:", 
+                min = as.Date("2002-01-01"), max = as.Date("2016-12-31"), 
+                value = c(as.Date("2012-02-25"), Sys.Date())
+    )
+  })
+  
+  
   output$boroSelect <- renderUI({
     selectInput(inputId = "boro",
                 label = "Borough",
                 choices = c("ALL", "MANHATTAN", "BROOKLYN", "QUEENS", "BRONX", "STATEN ISLAND"),
                 selected = "ALL")
+  })
+  
+  output$MapTypeSelect <- renderUI({
+    selectInput(inputId = "maptype",
+                label = "Map type",
+                choices = c("Point", "Heat map", "Density"),
+                selected = "Point")
   })
   #*************************************
   
@@ -77,12 +113,9 @@ server <- function(input, output) {
                    max = "12-31-2016")
   })
   
-  output$y_var <- renderUI({
-    selectInput(inputId = "y",
-                label = "Select Y-axis",
-                choices = c("Level", "Boro", "Pct"),
-                selected = "Pct")
-  })
+  
+  
+
   
   output$color_var <- renderUI({
     selectInput(inputId = "clr",
@@ -96,15 +129,55 @@ server <- function(input, output) {
   #Reactive expressions for Map Tab
   points <- reactive({
     req(input$boro, input$startDate)
+    
+   # filtered_data$crime_year <- year(filtered_data$DateReport)
     if (input$boro == "ALL"){
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% drop_na()
     }
     else {
-      filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
-    }
+      #filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
+     
+      #View(filtered_data$DateReport)
+      filtered_data <- NycAppData %>% filter( filter(DateStart == input$startDate)) %>% filter(Boro == input$boro) %>% drop_na()
+      
+       }
     #cbind(filtered_data$Long, filtered_data$Lat)
     filtered_data
+    
+    View(filtered_data)
    })
+  
+  
+  
+  output$NycDensityMap = renderLeaflet({
+    req(points())
+   
+    View(points())
+    crimeMap<- points()
+    crimeMap <- crimeMap[!is.na(Long)]
+    #dat[ , date := as.IDate(date, "%m/%d/%Y")]
+   
+    ## MAKE CONTOUR LINES
+    ## Note, bandwidth choice is based on MASS::bandwidth.nrd()
+    kde <- bkde2D(crimeMap[ , list(Long, Lat)],
+                  bandwidth=c(.0045, .0068), gridsize = c(100,100))
+    CL <- contourLines(kde$x1 , kde$x2 , kde$fhat)
+    
+    ## EXTRACT CONTOUR LINE LEVELS
+    LEVS <- as.factor(sapply(CL, `[[`, "level"))
+    NLEV <- length(levels(LEVS))
+    
+    ## CONVERT CONTOUR LINES TO POLYGONS
+    pgons <- lapply(1:length(CL), function(i)
+      Polygons(list(Polygon(cbind(CL[[i]]$x, CL[[i]]$y))), ID=i))
+    spgons = SpatialPolygons(pgons)
+    
+    ## Leaflet map with polygons
+    leaflet(spgons) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png") %>% 
+      addPolygons(color = heat.colors(NLEV, NULL)[LEVS])
+    
+  })
+  
   
   output$NycMap = renderLeaflet({
     req(points())
@@ -113,6 +186,15 @@ server <- function(input, output) {
               points()[i, "Pct"], ', ', 
               points()[i, "OffenseDesc"],'</p><p>' ) 
     })
+    
+    output$hist <- renderPlot({
+    
+      #req(filtered_data)
+      
+      #ggplot(filtered_data,ase())
+   hist(c(1:19))
+    })
+    
     
     leaflet(data = points()) %>%
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE)) %>%
@@ -130,6 +212,9 @@ server <- function(input, output) {
                                       "font-size" = "14px",
                                       "border-color" = "rgba(0,0,0,0.5)")),
         clusterOptions = markerClusterOptions())
+    
+    
+  
     
   })
   
@@ -149,6 +234,7 @@ server <- function(input, output) {
     p$elementId <- NULL
     p
   })
+  
   
   output$SummaryTable = renderDataTable({
     req(crime_data_filt())
