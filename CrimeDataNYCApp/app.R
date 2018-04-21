@@ -45,16 +45,14 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
                          uiOutput("y_var"),
                          uiOutput("color_var"))
         
-        #plotOutput("hist")
-        
-        
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("Map", value = 1, leafletOutput("NycMap"),leafletOutput("NycDensityMap")),
+                    tabPanel("Map", value = 1, leafletOutput("NycPointMap"),leafletOutput("NycDensityMap")),
                     tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=1600), dataTableOutput("SummaryTable")),
+                    tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
                     id = "tabselected")
         
       )
@@ -63,7 +61,7 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
 
 #Load the data files for the application
 load("NycAppData.RData")
-#load("Precincts.RData")
+load("Precincts.RData")
 
 #Server Function
 server <- function(input, output) {
@@ -128,28 +126,36 @@ server <- function(input, output) {
                 selected = "Level")
   })
   #*************************************  
+
+  #*************************************
+  #Render Histogram in Sidebar Panel (Placeholder)
+  output$hist <- renderPlot({
+    hist(c(1:19))
+  })
+  #*************************************
+
+  #****************************************************************************
+  #****************************************************************************
+  #MAPS TAB
+  #****************************************************************************
+  #****************************************************************************
   
   #*************************************  
   #Reactive expressions for Map Tab
   points <- reactive({
     req(input$boro, input$startDate)
-    
-   # filtered_data$crime_year <- year(filtered_data$DateReport)
     if (input$boro == "ALL"){
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% drop_na()
     }
     else {
       filtered_data <- NycAppData %>% filter(DateStart == input$startDate) %>% filter(Boro == input$boro) %>% drop_na()
     }
-    #cbind(filtered_data$Long, filtered_data$Lat)
     filtered_data
-    
-    #View(filtered_data)
    })
-  
-  
-  
-  output$NycDensityMap = renderLeaflet({
+
+  #*************************************  
+  #Leaflet Plot Density
+  output$NycDensityMap <- renderLeaflet({
     req(points())
    
     #View(points())
@@ -178,23 +184,15 @@ server <- function(input, output) {
     
   })
   
-  
-  output$NycMap = renderLeaflet({
+  #*************************************  
+  #Leaflet Plot Points
+  output$NycPointMap <- renderLeaflet({
     req(points())
     labs <- lapply(seq(nrow(points())), function(i) {
       paste0( '<p>', points()[i, "Level"], '<p></p>', 
               points()[i, "Pct"], ', ', 
               points()[i, "OffenseDesc"],'</p><p>' ) 
     })
-    
-    output$hist <- renderPlot({
-    
-      #req(filtered_data)
-      
-      #ggplot(filtered_data,ase())
-   hist(c(1:19))
-    })
-    
     
     leaflet(data = points()) %>%
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE)) %>%
@@ -212,14 +210,15 @@ server <- function(input, output) {
                                       "font-size" = "14px",
                                       "border-color" = "rgba(0,0,0,0.5)")),
         clusterOptions = markerClusterOptions())
-    
-    
-  
-    
   })
-  
-  #*************************************  
-  
+  #*************************************
+
+  #****************************************************************************
+  #****************************************************************************
+  #PLOTS TAB
+  #****************************************************************************
+  #****************************************************************************
+
   #*************************************  
   #Reactive Expressions for Plot Tab
   crime_data_filt <- reactive({
@@ -234,12 +233,26 @@ server <- function(input, output) {
     p$elementId <- NULL
     p
   })
-  
-  
+
   output$SummaryTable = renderDataTable({
     req(crime_data_filt())
     crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
   })
+  #*************************************  
+  
+  #****************************************************************************
+  #****************************************************************************
+  #PRECINCT MAPS TAB (Temporary - should be incorporated in MAPS tab)
+  #****************************************************************************
+  #****************************************************************************
+  
+  output$NycPrecinctMap <- renderLeaflet({
+    leaflet(nyc_precincts) %>%
+      addTiles() %>%
+      addPolygons(stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.3, fillColor = "blue", label = ~paste0("Pct: ", formatC(nyc_precincts@data[["Precinct"]])))
+  })
+  
+  
 }
 
 # Run the application 
