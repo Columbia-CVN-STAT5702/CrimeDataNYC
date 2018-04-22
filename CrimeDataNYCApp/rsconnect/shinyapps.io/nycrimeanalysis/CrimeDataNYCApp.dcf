@@ -5,8 +5,8 @@ account: nycrimeanalysis
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 326546
-bundleId: 1331051
+bundleId: 1332413
 url: https://nycrimeanalysis.shinyapps.io/CrimeDataNYCApp/
-when: 1524331935.77857
+when: 1524432515.1402
 asMultiple: FALSE
 asStatic: FALSE

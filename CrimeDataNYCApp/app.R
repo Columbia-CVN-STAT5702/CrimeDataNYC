@@ -11,10 +11,15 @@ library(plotly)
 library(DT)
 library(lubridate)
 library(ggplot2)
+library(leaflet.extras)
+library(ggpubr)
 library("sp")
 library("rgdal")
-# library("maptools")
 library("KernSmooth")
+
+library(tm)
+library(wordcloud)
+library(RWeka)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(theme = shinytheme("cosmo"),
@@ -29,27 +34,35 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
        # HTML('<p><img src="Columbia.png"/></p>'),
         
         
-        conditionalPanel(condition="input.tabselected==1", width="350px",
-                         uiOutput("yearRange"),
-                         div(style="display: inline-block;vertical-align:top; width: 100px;",uiOutput("dateSelect")),
-                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("boroSelect")),
-                         div(style="display: inline-block;vertical-align:top; width: 150px;",uiOutput("MapTypeSelect")),
-                         plotOutput("hist")),
+        conditionalPanel(condition="input.tabselected==1", width="400px",
+                         #uiOutput("yearRange")
+                         #,
+                         uiOutput("dateSelect"),
+                         uiOutput("boroSelect"),
+                         uiOutput("MapTypeSelect"),
+                         
+                         plotOutput("wrdcld")
+                         #div(style="display: inline-block;vertical-align:top; width: 150px; height=20px; font-weight : 10px;",uiOutput("CrimeTypeSelect"))
+        ),
+        
+        
         
         conditionalPanel(condition="input.tabselected==2",
                          uiOutput("dateRangeSelect"),
                          uiOutput("y_var"),
                          uiOutput("color_var"),
                          dataTableOutput("SummaryTable"))
+       
         
       ),
+     
       
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("Map", value = 1, leafletOutput("NycPointMap"),leafletOutput("NycDensityMap")),
+                    tabPanel("Map", value = 1,  leafletOutput("Nycgeomap",height = 625)),
                     tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=800)),
-                    tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
+                    #tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
                     id = "tabselected")
         
       )
@@ -92,10 +105,11 @@ server <- function(input, output) {
   
   output$MapTypeSelect <- renderUI({
     selectInput(inputId = "maptype",
-                label = "Map type",
-                choices = c("Point", "Heat map", "Density"),
-                selected = "Point")
-  })
+                label = "Select Display Geographic Map",
+                choices = c("Point "="point", "Heat Map"="heatmap", "Density"="density","Precincts" ="precincts"),
+                selected = "Point")})
+  
+  
   #*************************************
   
   #*************************************  
@@ -133,10 +147,53 @@ server <- function(input, output) {
   #*************************************  
 
   #*************************************
-  #Render Histogram in Sidebar Panel (Placeholder)
-  output$hist <- renderPlot({
-    hist(c(1:19))
+  #Render Crime Description Cloud in Sidebar Panel (Placeholder)
+  wordcloud_rep <- repeatable(wordcloud)
+  
+  getTermMatrix <- (function(text) {
+    
+    myCorpus = Corpus(VectorSource(text))
+    myCorpus = tm_map(myCorpus, content_transformer(tolower))
+    myCorpus = tm_map(myCorpus, removePunctuation)
+    myCorpus = tm_map(myCorpus, removeNumbers)
+    myCorpus = tm_map(myCorpus, removeWords,
+                      c(stopwords("SMART"),"the", "and", "but"))
+    
+    myDTM = TermDocumentMatrix(myCorpus,
+                               control = list(minWordLength = 1))
+    
+    m = as.matrix(myDTM)
+    
+    sort(rowSums(m), decreasing = TRUE)
   })
+  
+  output$wrdcld <- renderPlot({
+    
+    req(points())
+    DF<- points()
+    
+    text <- DF[!DF$OffenseDesc == '',] 
+    #View(text)
+    myCorpus = Corpus(VectorSource(DF$OffenseDesc))
+    #print(myCorpus)
+    myCorpus = tm_map(myCorpus, content_transformer(tolower))
+    myCorpus = tm_map(myCorpus, removePunctuation)
+    myCorpus = tm_map(myCorpus, removeNumbers)
+    myCorpus = tm_map(myCorpus, removeWords,
+                      c(stopwords("SMART"),"the", "and", "but"))
+    myDTM = TermDocumentMatrix(myCorpus,
+                               control = list(minWordLength = 1))
+    m = as.matrix(myDTM)
+    v<-sort(rowSums(m), decreasing = TRUE)
+    d <- data.frame(word = names(v),freq=v)
+    #head(d, 10)
+    pal <- brewer.pal(4,"YlGnBu")
+    #pal <- pal[-(1:4)]
+    #print(brewer.pal(4,"YlGnBu"))
+    wordcloud(myCorpus, max.words = 500, random.order = FALSE,colors = brewer.pal(4, "Dark2"))
+    
+  })
+  
   #*************************************
 
   #****************************************************************************
@@ -159,63 +216,102 @@ server <- function(input, output) {
    })
 
   #*************************************  
-  #Leaflet Plot Density
-  output$NycDensityMap <- renderLeaflet({
+  #Leaflet Map based on user select
+  
+  output$Nycgeomap =renderLeaflet({
+    
     req(points())
-   
+    req(input$maptype)
+    
+    #print("started")
     #View(points())
-    crimeMap<- points()
-    #crimeMap <- crimeMap[!is.na(Long)]
-    #dat[ , date := as.IDate(date, "%m/%d/%Y")]
-   
-    ## MAKE CONTOUR LINES
-    ## Note, bandwidth choice is based on MASS::bandwidth.nrd()
-    kde <- bkde2D(crimeMap[ , list(Long, Lat)],
-                  bandwidth=c(.0045, .0068), gridsize = c(100,100))
-    CL <- contourLines(kde$x1 , kde$x2 , kde$fhat)
     
-    ## EXTRACT CONTOUR LINE LEVELS
-    LEVS <- as.factor(sapply(CL, `[[`, "level"))
-    NLEV <- length(levels(LEVS))
+    crime_map<- points()
+    if(input$maptype =="heatmap")
+    {
+      
+      points_Lat_Long <- cbind(crime_map$Long, crime_map$Lat)
+      map = leaflet(crime_map) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")%>% 
+        addWebGLHeatmap(lng=~Long, lat=~Lat,size=20,units='px') 
+    }
     
-    ## CONVERT CONTOUR LINES TO POLYGONS
-    pgons <- lapply(1:length(CL), function(i)
-      Polygons(list(Polygon(cbind(CL[[i]]$x, CL[[i]]$y))), ID=i))
-    spgons = SpatialPolygons(pgons)
-    
-    ## Leaflet map with polygons
-    leaflet(spgons) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png") %>% 
-      addPolygons(color = heat.colors(NLEV, NULL)[LEVS])
+    else 
+    {
+      if(input$maptype =="density")
+      {
+        #print("density")
+        
+        points_Lat_Long <- cbind(crime_map$Long, crime_map$Lat)
+        #View(points_Lat_Long)
+        #crimeMap <- crimeMap[!is.na(Long)]
+        #dat[ , date := as.IDate(date, "%m/%d/%Y")]
+        
+        ## MAKE CONTOUR LINES
+        ## Note, bandwidth choice is based on MASS::bandwidth.nrd()
+        kde <- bkde2D(points_Lat_Long,
+                      bandwidth=c(.0045, .0068), gridsize = c(100,100))
+        CL <- contourLines(kde$x1 , kde$x2 , kde$fhat)
+        
+        ## EXTRACT CONTOUR LINE LEVELS
+        LEVS <- as.factor(sapply(CL, `[[`, "level"))
+        NLEV <- length(levels(LEVS))
+        
+        ## CONVERT CONTOUR LINES TO POLYGONS
+        pgons <- lapply(1:length(CL), function(i)
+          Polygons(list(Polygon(cbind(CL[[i]]$x, CL[[i]]$y))), ID=i))
+        spgons = SpatialPolygons(pgons)
+        
+        ## Leaflet map with polygons
+        leaflet(spgons) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png") %>% 
+          addPolygons(color = heat.colors(NLEV, NULL)[LEVS])
+        
+      }
+      else
+      {
+        if(input$maptype =="precincts")
+        {
+       
+            leaflet(nyc_precincts) %>%
+              addTiles() %>%
+              addPolygons(stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.3, fillColor = "blue", label = ~paste0("Pct: ", formatC(nyc_precincts@data[["Precinct"]])))
+        
+          
+        }else
+        {
+        labs <- lapply(seq(nrow(points())), function(i) {
+          paste0( '<p>', points()[i, "Level"], '<p></p>', 
+                  points()[i, "Pct"], ', ', 
+                  points()[i, "OffenseDesc"],'</p><p>' ) 
+                })
+        
+        
+        
+        leaflet(data = points()) %>%
+          addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE)) %>%
+          addMarkers(
+            lng = ~Long, 
+            lat = ~Lat, 
+            label = lapply(labs, HTML),
+            #label = ~as.character(OffenseDesc),
+            labelOptions = labelOptions(direction = "bottom",
+                                        style = list(
+                                          "color" = "red",
+                                          "font-family" = "serif",
+                                          "font-style" = "italic",
+                                          "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                                          "font-size" = "14px",
+                                          "border-color" = "rgba(0,0,0,0.5)")),
+            clusterOptions = markerClusterOptions())
+        
+        }
+        
+        
+      }
+    }
     
   })
   
-  #*************************************  
-  #Leaflet Plot Points
-  output$NycPointMap <- renderLeaflet({
-    req(points())
-    labs <- lapply(seq(nrow(points())), function(i) {
-      paste0( '<p>', points()[i, "Level"], '<p></p>', 
-              points()[i, "Pct"], ', ', 
-              points()[i, "OffenseDesc"],'</p><p>' ) 
-    })
-    
-    leaflet(data = points()) %>%
-      addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE)) %>%
-      addMarkers(
-        lng = ~Long, 
-        lat = ~Lat, 
-        label = lapply(labs, HTML),
-        #label = ~as.character(OffenseDesc),
-        labelOptions = labelOptions(direction = "bottom",
-                                    style = list(
-                                      "color" = "red",
-                                      "font-family" = "serif",
-                                      "font-style" = "italic",
-                                      "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
-                                      "font-size" = "14px",
-                                      "border-color" = "rgba(0,0,0,0.5)")),
-        clusterOptions = markerClusterOptions())
-  })
+  
   #*************************************
 
   #****************************************************************************
@@ -250,18 +346,6 @@ server <- function(input, output) {
     }
   })
   #*************************************  
-  
-  #****************************************************************************
-  #****************************************************************************
-  #PRECINCT MAPS TAB (Temporary - should be incorporated in MAPS tab)
-  #****************************************************************************
-  #****************************************************************************
-  
-  output$NycPrecinctMap <- renderLeaflet({
-    leaflet(nyc_precincts) %>%
-      addTiles() %>%
-      addPolygons(stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.3, fillColor = "blue", label = ~paste0("Pct: ", formatC(nyc_precincts@data[["Precinct"]])))
-  })
   
   
 }
