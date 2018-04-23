@@ -7,7 +7,30 @@ output: html_document
 ---
 
  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      echo=TRUE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
 
+
+
+```{r echo=FALSE}
+library(zoo)
+library(vcd)
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(lattice)
+library(ggplot2)
+library(forcats)
+library(extracat)
+library(vcdExtra)
+library(gridExtra)
+library(tidyverse)
+library(data.table)
+```
 
 
 ## Introduction
@@ -37,80 +60,87 @@ Team Members and main roles:
 * Jingbo Wu:  Data description; Data Quality Analysis; Partial Main Analysis including time series, frequency analysis on different time scale (annual cycle, monthly cycle, weekly cycle, daily cycle); heatmaps; frequency by Precincts   
 
 
-## Data Description
+## Description of Data 
 
-Source of the data:
+#### Main Data Set
 
-  * https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Historic/qgea-i56i
-  * API access via SODA API: https://data.cityofnewyork.us/resource/9s4h-37hy.csv
-  
-  * This dataset includes all valid felony, misdemeanor, and violation crimes reported to
-    the New York City Police Department (NYPD) from 2006 to the end of last year (2016). 
-    The dataset is created on Novermber 2, 2016. The update frequency is annually.
-  
-  * The dataset is provided by NYPD and owned by NYC OpenData. It has 5.58 Million rows and 24 variables. 
-    Three types of variables included are number, text, and location. The 24 variables are listed below.
+The main source of data is from the New York City Open Data site, and can be accessed as follows:  
+1. Visit https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Historic/qgea-i56i  
+2. Click Export  
+3. Click CSV button  
+4. Put it in your working directory  
 
-  * Only valid complaints are included in this release. Information is accurate as of the date 
-    it was queried from the system of the record, but should be considered a close approximation of 
-    the current records, due to complaint revisions and updates. (NYPDIncidentLevelDataFootnotes.pdf)
 
-# 3. Analysis of Data Quality
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE,
-                      echo=FALSE,
-                      message = FALSE, 
-                      cache = TRUE)
-```
+We downloaded the data for our own analysis on March 5, 2018. The data is updated annually in August, though it would be possible to replicate this analysis after August by limiting the data by date to the same time frame.
 
-```{r}
-library(zoo)
-library(vcd)
-library(dplyr)
-library(tidyr)
-library(tibble)
-library(lattice)
-library(ggplot2)
-library(forcats)
-library(extracat)
-library(vcdExtra)
-library(gridExtra)
-library(tidyverse)
-library(data.table)
+* This dataset includes all valid felony, misdemeanor, and violation crimes reported to the New York City Police Department (NYPD) from 2006 to the end of the year prior to the dataset creation (2016). The dataset was created on November 2, 2017. 
+* The dataset is provided by The New York Police Department and owned by NYC OpenData. It has 5.58 Million rows and 24 variables. Three types of variables included are number, text, and location. The 24 variables are listed below. 
+* Only valid complaints are included in this release. Information is accurate as of the date it was queried from the system of the record, but should be considered a close approximation of the current records, due to complaint revisions and updates. (NYPDIncidentLevelDataFootnotes.pdf)  
 
+
+We used the following commands to import and arrange the data for analysis:
+
+```{r results ="hide"}
 var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
-               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", 
-               "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
 
 crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
 
-crime_df%>%mutate(DateStart=as.Date(DateStart,format='%m/%d/%Y'),
-                  DateEnd=as.Date(DateEnd,format='%m/%d/%Y'),
-                  DateReport=as.Date(DateReport,format='%m/%d/%Y'))->crime_df
+crime_df <- crime_df %>% 
+                mutate(DateStart=as.Date(DateStart,format='%m/%d/%Y'),
+                      DateEnd=as.Date(DateEnd,format='%m/%d/%Y'),
+                      DateReport=as.Date(DateReport,format='%m/%d/%Y'))
 ```
 
-### -Missing Pattern
+#### Supplementary Data Sets
+
+To examine relationships with crime that went beyond the main data set, we accessed the following, other sites:  
+
+* Borough Population Data  
+http://www1.nyc.gov/site/planning/data-maps/nyc-population/current-future-populations.page
+
+* Phases of the Moon Data  
+https://www.somacon.com/p570.php
+
+* Police Precinct Map Data  
+https://data.cityofnewyork.us/Public-Safety/Police-Precincts/78dh-3ptz/data
+
+* Weather Data  
+https://www.ncdc.noaa.gov/
+
+
+
+## Analysis of Data Quality
+
+We found no significant issues in data quality that would inhibit analysis, with the possible exception of geo-location pertaining to certain types of crimes.
+
+The dataset has 24 variables and approximately 5.6 million rows, each listing a single complaint or event. The Report Date (the case reporting time) ranges from 2006-01-01 to 2016-12-31. In this section, we will investigate the patterns of missing data as well as potential errors in the data in order to determine how well we can trust the data we are using.
+
+
+#### Missing variables Pattern using Visna
+
+A summary graphic of missing patterns is shown below  
+
 
 ```{r fig.height=6}
 visna(crime_df,sort="b")
-```
+``` 
 
-* This dataset has 24 variables and ~5.6 Million rows of complaints/events. It includes all cases with reporting date (DateReport) ranges from 2006-01-01 to 2016-12-31. In this section, we investigate the missing patterns and possible errorness of variables that are important to the understanting of the crime's when, where and what.The overall missing patterns are shown above.
+From the above Visna Plot, our observations about the missing patterns are as below :  
 
-* 5 variables has data all valid. They are complaint number (ID),  report date (DateReport), 3 digit offense classification code (ClassCode), level of offense (Level), jurisdiction responsible for incident (JurisDiction). 
+* Five of the 24 variables have no data quality concerns:
+    1. Complaint Number  
+    2. Report Date  
+    3. Offense Classification Code  
+    4. Level of Offense  
+    5. Jurisdiction responsible  
+* *AtptCptdStatus* is an indicator of whether crime attempted or completed. There are only 7 missing cases; 5,483,869 coded as completed, and 96,159 cases indicated as attempted.  
+* *ParkName* is recorded if the event occurred in a park. Most of the cases doesn’t have this variable simply because most crimes did not occur in parks. We cannot estimate the percent of real missing park data.  
 
-* AtptCptdStatus is an indicator of whether crime attemped or complelted. Only 7 missing cases; 5483869 coded as completed, and 96159 cases indicated as attempted. 
-
-* ParkName are given if the event occurred there. Most of the cases doesn't have this vairable mostly becasue it doesn't apply. How much percent of real missing of park place, we don't know.
 
 
-### -Missing DateStart
+#### Missing Start-Date of Crime Reported
 
-There are total of 655 complaints missing DateStart, of which, 
-
-  1. When looking at the RPT_DT (reporting date) although they look slightly clusted at the beginning around 2006 and less at the ending around 2016, the reporting dates still look pretty even over the period suggesting randomness of the missing against DateReport.
-  2. The frequency distrinution of Level shares the same pattern of that from all data.
-  3. The frequency distrinution of ClassCode shares the same pattern of that from all data. 
 ```{r}
 #get the reporting dates of cases with starting dates missing and histogram over DateReport
 crime_df%>%select(DateStart,DateReport)%>%filter(is.na(DateStart))%>%select(DateReport)->tmp1
@@ -137,7 +167,14 @@ tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-### -Errors in DateStart
+
+There are total of 655 complaints missing the crime Start Date. The missing data is distributed the same as non-missing data, so we are not concerned about this random-appearing missing data.
+
+When looking at the Date of the Report against the volume of missing Start Dates, we notice that the are far more missing Start Dates in the earlier time periods with the volume of missing leveling out after 2010.
+The frequency of missing Start Date by Level of Crime looks the same as the non-missing Start Date data.
+The frequency distribution of the Offense Code shares the same pattern as the non-missing Start Date data.
+
+#### Errors in Start-Date of Crime Reported
 
 ```{r fig.height=4,fig.width=4}
 crime_df%>%select(DateStart,DateEnd,DateReport)->df_3DT
@@ -153,11 +190,13 @@ splom(df_3DT_Year1960to1980,varname.cex = .5,axis.text.cex = .5,cex=.5,xlab=NULL
 grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
 ```
 
-* There seems to be errors in DateStart. It dated back to Year 1015 which is suspicious. But by referncing to DateReport, 2 dates usually have very close month/date. It seems Year1015 may actually be Year2015 due to a typo. DateEnd also suggests so.
-* The scatterplot of the DateStart vs DateReport did show some strict linear correlation for many cases during some periods.
-* As shown above, the amount of such cases is not large. In our main analysis, we will focus on cases with Datestart after Jan. 1,2000 up until Dec. 31, 2016 in total over 5.57M. Cases with DateStart earlier than Jan. 1, 2000 are totaled 1549.
+* There seems to be errors in *DateStart*. Some cases are shown with a year of 1015 (needless to say, a time frame not covered by this dataset). By comparing those Start Dates to the Dates of the Report, The two dates usually have very close month/date. The *DateEnd* variable also suggests the actual year to be 2015, and hence, a typo.   
+* The scatterplot of *DateStart* vs *DateReport* did show some strict linear correlation for many cases during some periods.
+* As shown in the figure, the amount of such cases is very small. In our main analysis, we will focus on cases with *DateStart* after Jan. 1, 2000 up until Dec. 31, 2016 in total over 5.57M. Cases with *DateStart* earlier than Jan. 1, 2000 are totaled 1549 which will be ignored.
 
-### -Missing PremDesc
+
+
+#### Missing Premises Description *(PremDesc)*
 
 ```{r}
 #get the reporting dates of cases with PremDesc missing and histogram over DateReport
@@ -186,11 +225,14 @@ tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+
 grid.arrange(p1,p2,p3,nrow=1)
 ```
 
-* There are 35198 cases missing PremDesc. 
-* Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher freqency in the missing data. 
-* In year 2006, there are much more cases with missing PremDesc than other years. Year 2006 did have more cases overall comparing with other years.  
+We do not rely on the description of premises much in our analyses, but readers should note that approximately 0.6% of the crimes do not have a description of the premises, with a disproportionately high number of those cases pertaining to murder/manslaughter.
 
-### -Mismatch between Pct and Boro
+* There are 35,198 cases missing the description of the premises.
+* Comparison of the pattern of ClassCode between all cases vs. cases with missing PremDesc indicates that the category with ClassCode=101, which represents felony crime of MURDER & NON-NEGL. MANSLAUGHTER, have much higher frequency in the missing data.
+* In 2006, there are many more cases with missing PremDesc than other years. Year 2006 had more cases overall compared to other years.
+
+
+#### Mismatch between Precinct *(Pct)* and Borough *(Boro)*
 
 ```{r}
 crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summarise(count=n())->tmp1
@@ -201,9 +243,15 @@ for (i in  1:length(uniPct)) {
   }
 }
 ```
-* There are total of 77 distinct precincts in NYC. A list above shows Pct with double/triple borough names. 
-* There are about 16 cases with precint number not consistent with the borough name. For those precints with double/triple borough names, the # of cases with a 2nd/3rd borough name are only 1-3. This problem can be fixed by correcting the borough names of those rare cases using a map of Pct vs Boro established from dataset. 
-* 390 cases with missing Pct. 463 cases with missing Boro. Comparing to the total # of cases over 5M, they won't affect the results.
+
+
+There are a very small number of cases where Precinct or Borough are missing (0.007% and 0.008% of all cases, respectively). There is an even smaller number of cases where the Precinct shows an incorrect Borough.
+
+* There are total of 77 distinct police precincts in NYC. A list above shows cases where a Borough is listed for a Precinct that is inconsistent with the vast majority of cases.
+* There are about 16 cases where the Precinct shown is not consistent with the Borough in this manner. For those Precincts with such inconsistencies, the number of cases with a inconsistent Borough name range from 1 to 3 cases. This problem can be fixed by correcting the Borough names of those rare cases using a map of Pct vs Boro established from dataset.
+* 390 cases have a missing Pct. 463 cases have a missing Boro. 
+
+** This section below needs review, did not find in word,  I see that we are using this to correct and merge, so should we move to appropriate section **  
 \
 \
 ```{r}
@@ -219,7 +267,8 @@ crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summaris
 ```
 
 
-### -Missing OffenseDesc
+#### Missing Description of Offense *(OffenseDesc)*
+ 
 
 ```{r}
 #match_code_desc can be used to retrieve OffenseDesc(when missing) from ClassCode
@@ -244,11 +293,14 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 #merge(crime_df%>%select(-OffenseDesc),match_code_desc, by.x="ClassCode",by.y = "ClassCode",all.x=TRUE)->crime_df
 ```
 
-* OffenseDesc (with missing values) is the description of offense corresponding with key code ClassCode which is complete in the dataset. Code and description map each other and valid OffenseDesc can be infered from a map established from the dataset.  
+Since the description of the offense can be inferred from the classification code, we should not be concerned about the missing values in this variable. 
 
-* The plot above shows missing counts of the ClassCode categories with OffenseDesc originally missing but now retrieved from the map between ClassCode and OffenseDesc.
+* *OffenseDesc* (with missing values) is the description of offense corresponding with key code ClassCode (which is complete in the dataset). Code and description map to each other and a valid *OffenseDesc* can be inferred from a map established from the dataset.
+The plot above shows missing counts of the ClassCode categories with *OffenseDesc* originally missing but now retrieved from the map between *ClassCode* and *OffenseDesc*.
+* *OffenseDesc* (with missing values) is the description of offense corresponding with key code *ClassCode* which is complete in the dataset. Code and description map each other and valid *OffenseDesc* can be infered from a map established from the dataset.  
+* The plot above shows missing counts of the *ClassCode* categories with *OffenseDesc* originally missing but now retrieved from the map between *ClassCode* and *OffenseDesc*.
 
-### -Missing Geolocation
+#### Missing Geolocation
 
 ```{r}
 #For cases with missing geolocation (using Lat here), how they distribute over the code ClassCode
