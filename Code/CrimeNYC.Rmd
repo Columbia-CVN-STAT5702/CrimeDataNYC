@@ -1,21 +1,43 @@
 ---
-title: "STATGR5702 Final Project---Crime in NYC"
+title: "New York City and Crime, A Story of Data Analysis "
+### STATGR5702 Spring 2018 Final Project
 author: Brent Daniel, Richard Lavery, Anita Pinto, Rashmi Rajaguru, Jingbo Wu
-due date: April 24, 2018
+due date: April 26, 2018
 output: html_document
 ---
 
-# 1. Introduction
+ 
 
-The topic is choosen to answer some interesting questions: 
 
-    1.  Where are the crimes mostly happening?
 
-    2.  When do they happen? Varying with month, with day?
+## Introduction
 
-    3.  What is the frequency distribution of different crimes? 
+Crime has long been a story in New York City. Many of us have witnessed significant changes in both the frequency of crime and the most prevalent types of crime that have dominated New York City in the last 30 years.
 
-# 2. Data Description
+Crime, in general, is a major topic for any major city. Whatever a city may have to offer, crime seems to be a major detractor for those visiting and considering living there. 
+
+It is only natural, then, we should want to give crime in New York a thorough, analytical look.
+
+
+* **What** crimes are happening? (What types of crime are most frequent?)
+* **Where** do crimes happen? (Which Boroughs? Maps of crime?)
+* **When** do crimes occur? (Time of day? Of Month? How has crime changed over time?) 
+* **Why?** (Or, what other phenomena might explain crime frequency?)
+
+(It is unsurprising that we cannot examine **Who** and **How**, as public datasets protect perpetrator and victim privacy, and don’t include methods of crime).
+
+Our analysis will focus on exploration of these themes, the **What**, **Where**, **When** and **Why** of New York City Crime.  
+
+Team Members and main roles:  
+
+* Brent Daniel: Borough Crime Analysis, Crime vs. Temperature, Writing/Editing, Project Leadership
+* Rich Lavery: Merging Meteorological and Lunar Cycle Data Looking for Relationships with Crime.  Interactive Web Application Development.  
+* Anita  Pinto: Offense Categories Broad and Internal Desc with Borough Distribution, Premises/Location Analysis for Different Crime Categories, Crimes in Parks and Categories, Time Trend of Crime Categories and Attempted Crime Analysis 
+* Rashmi Rajaguru:  (brief description)
+* Jingbo Wu:  Data description; Data Quality Analysis; Partial Main Analysis including time series, frequency analysis on different time scale (annual cycle, monthly cycle, weekly cycle, daily cycle); heatmaps; frequency by Precincts   
+
+
+## Data Description
 
 Source of the data:
 
