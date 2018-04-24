@@ -843,9 +843,9 @@ crime_df %>% select(Level,Pct)%>%group_by(Level,Pct)%>%
 merge(df_pct,match_pct_boro,by.x="Pct",by.y="Pct")->df_pbl
 df_pbl%>%mutate(Pct=as.factor(Pct))->df_pbl
 
-df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", "orange","green","red","yellow"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
+df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("red","orange","yellow","green","blue","violet"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p5
-df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", "green","red"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
+df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p6
 grid.arrange(p5,p6,nrow=1)
 ```
