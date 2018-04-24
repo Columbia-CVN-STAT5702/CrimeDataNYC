@@ -99,9 +99,10 @@ crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = 
 crime_df$DateStart <- as.Date(crime_df$DateStart, format='%m/%d/%Y')
 crime_df$DateEnd <- as.Date(crime_df$DateEnd, format='%m/%d/%Y')
 crime_df$DateReport <- as.Date(crime_df$DateReport, format='%m/%d/%Y')
+```
 
+```{r}
 crime_w_df <- crime_df
-
 ```
 
 #### Supplementary Data Sets
@@ -677,8 +678,8 @@ While Felonies and Misdemeanors follow the same pattern as crime, overall, this 
 \
 \
 ```{r}
-#picking non-missing DateStart and filter only those after "2000-01-01", 5560408 obs.
-crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2000-01-01"))->df_Date
+#picking non-missing DateStart and filter only those after "2006-01-01", 5560408 obs.
+crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2006-01-01"))->df_Date
 ```
 
 ```{r}
@@ -707,7 +708,7 @@ byDateLawMean%>%arrange(dplyr::desc(count))%>%filter(count>=count[9])%>%
 crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
 crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
 cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
-ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.75))->p1
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.75))+ggtitle("ALL")->p1
 
 crime_df%>%filter(Level=="FELONY")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
 crime_df%>%filter(Level=="FELONY")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
