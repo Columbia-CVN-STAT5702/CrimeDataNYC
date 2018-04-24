@@ -58,6 +58,8 @@ violent_crime_df <- crime_df %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFE
                                           IntOffenseDesc == "SEXUAL ABUSE" |
                                           IntOffenseDesc == "SEXUAL ABUSE 3,2")
 
+drugs_crime_df <- crime_df %>% filter(OffenseDesc == "DANGEROUS DRUGS")
+
 
 #Generate plot to compare average number of crimes on rainy days as compared to non-rainy days
 rainy_day_summary <- crime_df %>% filter(PRCP > 0.50) %>% group_by(Pct) %>% summarize(count_rain = n(), n_days_rain = n_distinct(DateStart), Rain = count_rain/n_days_rain) %>% drop_na() %>% select(Pct, Rain)
@@ -270,6 +272,22 @@ ggplot(vc_df_rain, aes(x=PRCP, y=Count)) +
   annotate("text", x= 3.5, y=240, label=paste0("y=",round(vclm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vclm_rain[["coefficients"]][["(Intercept)"]],0))) +
   labs(x = "Precipitation [inches]", y = "Daily Violent Crime Incident Count", title = "Daily Violet Crime Counts vs. Precipitation with Linear Models")
 
+#Plot data only for Dangerous Drugs crimes vs precipitation with linear model result
+#Generate scatterplot of crime vs precipitiation
+dg_df_rain <- drugs_crime_df %>% group_by(DateStart) %>% summarize(Count = n()) %>% drop_na()
+#append weather data
+dg_df_rain <- dg_df_rain %>% left_join(weather_data, by = c("DateStart" = "DATE")) %>% select(DateStart, Count, PRCP)
+#Scatter plot of daily crimes vs. precipitation level
+
+#Generate linear model for Violent Crime vs. Precipitation
+dglm_rain <- lm(Count~PRCP, dg_df_rain)
+
+ggplot(dg_df_rain, aes(x=PRCP, y=Count)) + 
+  geom_point(alpha=0.3) +
+  geom_abline(slope=dglm_rain[["coefficients"]][["PRCP"]],intercept=dglm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3.5, y=75, label=paste0("y=",round(dglm_rain[["coefficients"]][["PRCP"]],2),"x+",round(dglm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  labs(x = "Precipitation [inches]", y = "Daily Dangerous Drugs Crime Incident Count", title = "Daily Dangerous Drugs Crime Counts vs. Precipitation with Linear Models")
+
 
 
 #New Plots for full moon analysis
@@ -316,4 +334,21 @@ ggplot(data = vc_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
   theme(axis.text.x=element_blank()) +
   geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
   ggtitle("Moon Phase vs. Violent Crime Count Analysis")
+
+#Generate the same analysis based on Dangerous Drugs Crimes
+dg_moon_summary <- drugs_crime_df %>% 
+  filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
+  group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
+dg_moon_avg_crime <- dg_moon_summary %>% group_by(phase) %>% summarize(Avg_Count = weighted.mean(Count))
+dg_moon_total_crime <- dg_moon_summary %>% group_by(phase) %>% summarize(Total_Count = sum(Count))
+dg_moon_phase_total_count <- sum(dg_moon_total_crime$Total_Count)
+dg_moon_total_crime <- dg_moon_total_crime %>% mutate(Pct = Total_Count/dg_moon_phase_total_count)
+
+ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y", start=0) +
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
+  ggtitle("Moon Phase vs. Dangerous Drugs Crime Count Analysis")
 
