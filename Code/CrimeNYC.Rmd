@@ -96,10 +96,12 @@ var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport
 
 crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
 
-crime_df <- crime_df %>% 
-                mutate(DateStart=as.Date(DateStart,format='%m/%d/%Y'),
-                      DateEnd=as.Date(DateEnd,format='%m/%d/%Y'),
-                      DateReport=as.Date(DateReport,format='%m/%d/%Y'))
+crime_df$DateStart <- as.Date(crime_df$DateStart, format='%m/%d/%Y')
+crime_df$DateEnd <- as.Date(crime_df$DateEnd, format='%m/%d/%Y')
+crime_df$DateReport <- as.Date(crime_df$DateReport, format='%m/%d/%Y')
+
+crime_w_df <- crime_df
+
 ```
 
 #### Supplementary Data Sets
@@ -768,7 +770,171 @@ A few observations from this heat map:
 * That dark, blue/purple box represents “Loitering/DeviateSex” at 4am, with a green box at 3am. Just a coincidence that as bars are getting set to close, and after they close, we see a lot of people milling around, “loitering”?  
 * We can also see a peak for “Intoxicated/Impaired” in the 3am hour, just before bars close  
 * There is an odd pattern with “Under the Influence of Drugs” bunches up in three specific hours: Midnight, 9am and 6pm. 
-* Generally, most crime categories show a relatively even distribution across the clock, with higher proportions in the afternoon, and lower proportions in the early morning, in the hours between 5 and 7am.
+* Generally, most crime categories show a relatively even distribution across the clock, with higher proportions in the afternoon, and lower proportions in the early morning, in the hours between 5 and 7am.  
+
+
+**Why: what factors may contribute to more (or less) crime?**
+
+We came up with a series of ideas of factors that may contribute to the volume of crime. Each required we find a daily dataset with variables we could add to our main dataset.  
+
+We began with temperature data from NOAA.
+
+* Temperature: Hotter vs. colder  
+
+*Rich’s graph*
+
+This graphs shows that in nearly all precincts, the colder days have fewer crimes committed than on days with hot weather. We can also look to see if the effect is different for the level of the crime.
+  
+* Precipitation
+We continue with our weather data to see if rain makes a difference in crime. It turns out that a bit of rain does seem to reduce crime a bit, as the slope-trend is negative
+
+```{r fig.width=8, fig.height=5}
+########################################################################################
+#Read in weather data from file
+weather_select = c("DATE", "AWND", "PRCP", "SNOW", "TMAX")
+weather_data <- fread("../Data_Files/nyc_weather_data.csv", na.strings="", select = weather_select, stringsAsFactors = FALSE)
+weather_data$DATE <- as.Date(weather_data$DATE)
+weather_data$AWND <- as.numeric(weather_data$AWND)
+weather_data$PRCP <- as.numeric(weather_data$PRCP)
+weather_data$SNOW <- as.numeric(weather_data$SNOW)
+weather_data$TMAX <- as.numeric(weather_data$TMAX)
+
+#Merge the data together
+crime_w_df <- crime_w_df[weather_data, on=.(DateStart = DATE)]
+
+###############################################################################
+#Read in moon phase data
+moon_data <- fread("../Data_Files/nyc_moon_data.csv", na.strings="", select = c("date", "phase"), stringsAsFactors = FALSE)
+moon_data$date <- as.Date(moon_data$date, format='%m/%d/%Y')
+moon_data$phase <- as.factor(moon_data$phase)
+full_moon_data <- moon_data %>% filter(phase == "Full Moon")
+
+#Merge the moon phase data into the main data frame
+crime_w_df <- crime_w_df %>% left_join(moon_data, by = c("DateStart" = "date"))
+
+#Generate violent crime dataframe
+#filter for violent crime
+violent_crime_df <- crime_w_df %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                          OffenseDesc == "FELONY ASSAULT" | 
+                                          OffenseDesc == "MURDER & NON-NEGL. MANSLAUGHTER" |  
+                                          OffenseDesc == "RAPE" |
+                                          OffenseDesc == "ROBBERY" |
+                                          IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                          IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                          IntOffenseDesc == "ASSAULT 3" |
+                                          IntOffenseDesc == "RAPE 1" |
+                                          IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                          IntOffenseDesc == "SEXUAL ABUSE" |
+                                          IntOffenseDesc == "SEXUAL ABUSE 3,2")
+
+```
+
+
+
+```{r, fig.width = 8, fig.height = 5}
+#Generate scatterplot of crime vs precipitiation
+rain_summary_per_day <- crime_w_df %>% group_by(DateStart, Level) %>% summarize(Count = n()) %>% drop_na()
+#append weather data
+rain_summary_per_day <- rain_summary_per_day %>% left_join(weather_data, by = c("DateStart" = "DATE")) %>% select(DateStart, Level, Count, PRCP)
+#Scatter plot of daily crimes vs. precipitation level
+
+#Filter on Level of crime and generate linear model for each
+# linear model: Felonies
+f_df_rain <- rain_summary_per_day %>% filter(Level=="FELONY")
+flm_rain <- lm(Count~PRCP, f_df_rain)
+# linear model: Misdemeanors
+m_df_rain <- rain_summary_per_day %>% filter(Level=="MISDEMEANOR")
+mlm_rain <- lm(Count~PRCP, m_df_rain)
+# linear model: Violation
+v_df_rain <- rain_summary_per_day %>% filter(Level=="VIOLATION")
+vlm_rain <- lm(Count~PRCP, v_df_rain)
+
+#Plot data for all three crime levels vs precipitation with linear model results
+ggplot(rain_summary_per_day, aes(x=PRCP, y=Count, color=Level)) + 
+  geom_point(alpha=0.3) +
+  geom_abline(slope=flm_rain[["coefficients"]][["PRCP"]],intercept=flm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=420, label=paste0("y=",round(flm_rain[["coefficients"]][["PRCP"]],2),"x+",round(flm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=mlm_rain[["coefficients"]][["PRCP"]],intercept=mlm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=750, label=paste0("y=",round(mlm_rain[["coefficients"]][["PRCP"]],2),"x+",round(mlm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=vlm_rain[["coefficients"]][["PRCP"]],intercept=vlm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=180, label=paste0("y=",round(vlm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vlm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  labs(x = "Precipitation [inches]", y = "Daily Crime Incident Count", title = "Daily Crime Counts vs. Precipitation by Level of Crime with Linear Models")
+
+#Plot data only for violent crimes vs precipitation with linear model result
+#Generate scatterplot of crime vs precipitiation
+vc_df_rain <- violent_crime_df %>% group_by(DateStart) %>% summarize(Count = n()) %>% drop_na()
+#append weather data
+vc_df_rain <- vc_df_rain %>% left_join(weather_data, by = c("DateStart" = "DATE")) %>% select(DateStart, Count, PRCP)
+#Scatter plot of daily crimes vs. precipitation level
+
+#Generate linear model for Violent Crime vs. Precipitation
+vclm_rain <- lm(Count~PRCP, vc_df_rain)
+
+ggplot(vc_df_rain, aes(x=PRCP, y=Count)) + 
+  geom_point(alpha=0.3) +
+  geom_abline(slope=vclm_rain[["coefficients"]][["PRCP"]],intercept=vclm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3.5, y=240, label=paste0("y=",round(vclm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vclm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  labs(x = "Precipitation [inches]", y = "Daily Violent Crime Incident Count", title = "Daily Violet Crime Counts vs. Precipitation with Linear Models")
+```
+
+
+We can clearly see a reduction in the average number of crimes reported on days with significant precipitation.  This is not very surprising as we would expect less people to be out on days with bad weather.  The effect of increasing precipitation on misdemeanors appears to be the most significant, with a lesser impact on felonies and violations.  When looking at the same analysis after filtering only on Violent Crimes, we see a relationship very similar to that of felonies, which is what we would expect considering most violent crimes are felonies.
+
+A lot of the data is on days with no rain, and you can read right off the graph that there is a fairly wide range of daily crime rate on days with no rain. However, as the amount of rain starts to register, the density of the dots seem to shift downward, indicating that more rain = less crime. The pattern for Violent Crimes is similar, less violent crime on rainy days.
+
+* Full Moon
+
+We brought in data on the phases of the moon, just to test the idea that with a full moon we might see more crime. Articles such as in Decoded Science (https://www.decodedscience.org/full-moons-crime-aka-lunar-effect-real-deal-pseudoscience/41881) examine the issue, but we thought we could examine it in our dataset.
+
+```{r, fig.width = 6, fig.height = 6}
+moon_summary <- crime_w_df %>% 
+  filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
+  group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
+moon_avg_crime <- moon_summary %>% group_by(phase) %>% summarize(Avg_Count = weighted.mean(Count))
+moon_total_crime <- moon_summary %>% group_by(phase) %>% summarize(Total_Count = sum(Count))
+moon_phase_total_count <- sum(moon_total_crime$Total_Count)
+moon_total_crime <- moon_total_crime %>% mutate(Pct = Total_Count/moon_phase_total_count)
+
+#Create a pie chart
+blank_theme <- theme_minimal()+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=14, face="bold")
+  )
+
+ggplot(data = moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y", start=0) +
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
+  ggtitle("Moon Phase vs. Crime Count Analysis")
+
+#Generate the same analysis based on Violent Crimes
+vc_moon_summary <- violent_crime_df %>% 
+  filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
+  group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
+vc_moon_avg_crime <- vc_moon_summary %>% group_by(phase) %>% summarize(Avg_Count = weighted.mean(Count))
+vc_moon_total_crime <- vc_moon_summary %>% group_by(phase) %>% summarize(Total_Count = sum(Count))
+vc_moon_phase_total_count <- sum(vc_moon_total_crime$Total_Count)
+vc_moon_total_crime <- vc_moon_total_crime %>% mutate(Pct = Total_Count/vc_moon_phase_total_count)
+
+ggplot(data = vc_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y", start=0) +
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
+  ggtitle("Moon Phase vs. Violent Crime Count Analysis")
+```
+
+We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
+
+
 
 
 
