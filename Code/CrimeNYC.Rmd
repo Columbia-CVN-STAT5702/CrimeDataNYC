@@ -559,7 +559,7 @@ From this view, we also see there there are some notable differences between Bor
 
 We can also get more specific about the top 6 types of crime, in terms of crime in the Boroughs.  
 
-```{r fig.height=5, fig.width=16}
+```{r fig.height=5, fig.width=10}
   top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAULT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
   label_list   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEFF", "ASSAULT 3" , "GRAND LARCENY", "DANGEROUS DRUGS")
  
@@ -572,7 +572,7 @@ We can also get more specific about the top 6 types of crime, in terms of crime 
   
   crime_sort$OffenseDesc <- factor(crime_sort$OffenseDesc)
   
-  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,6.3), offset_varnames = c(1,0,0,11.6), just_labels=c("left", "left", "left", "center")), crime_sort)
+  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,3.3), offset_varnames = c(1,0,0,7.6), just_labels=c("left", "left", "left", "center")), crime_sort)
   
 ```  
 
@@ -600,7 +600,7 @@ Drugs and Violent Crime: This graph also reinforces how significantly Dangerous 
 
 The dataset includes a field called “PREM_TYP_DESC” (which we have shortened to **PremDesc**) to indicate where the crime took place, such as on the street, in a house, etc. It turns out that about 85% of crime occurs on the Streets or within a Residence of one type or another.  
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=6, fig.width=12}
   
   crime_place <- crime_df %>%
                  filter(!is.na(PremDesc),Level !="") %>%
@@ -621,7 +621,7 @@ The dataset includes a field called “PREM_TYP_DESC” (which we have shortened
 
 Here we see how crime on the Street is the largest, single category (nearly 40%), but if you add together the various Residence categories, Residences total 45%. This vastly outnumbers the Subway, Commercial buildings, etc.  
 
-```{r fig.height=4, fig.width=12}
+```{r fig.height=6, fig.width=12}
 crime_place_2 <- crime_df %>%
                  filter(!is.na(PremDesc),Level !="") %>%
                  group_by(Level,PremDesc) %>%
@@ -644,44 +644,44 @@ crime_place_2 <- crime_df %>%
     ggtitle(" Place of Crime Distribution Across Crime Categories")
   
 ```
-While Felonies and Misdemeanors follow the same pattern as crime, overall, this graph shows that more Violations happen in Apartments than on the street.  
+While Felonies and Misdemeanors follow the same pattern as crime, overall, this graph shows that more Violations happen in Apartments than on the street.
 
-* Precinct differences  
 
-In terms of where, we can also look at the police precincts.   
 
-```{r fig.height=4.5}
-#matching Pct with Boro
-crime_df %>% select(Level,Pct)%>%group_by(Level,Pct)%>%
-  drop_na()%>%dplyr::summarize(count = n())%>%ungroup()->df_pct
-merge(df_pct,match_pct_boro,by.x="Pct",by.y="Pct")->df_pbl
-df_pbl%>%mutate(Pct=as.factor(Pct))->df_pbl
 
-df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", "orange","green","red","yellow"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
-        legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p5
-df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("blue", "green","red"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
-        legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p6
-grid.arrange(p5,p6,nrow=1)
+
+
+
+
+
+
+### Executive Summary 
+### Interactive Component
+### Conclusion 
+
+```{r}
+#ap crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+#ap crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2000)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+#ap 
+#ap cbind(rbind(data.frame(Year=2000:2005,Report=NA),totalCntByRD),
+#ap       totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+#ap ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank())->p1
+#ap totalCnt%>%filter(Year>=2006)%>%ggplot()+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+ylim(2006,2016)+theme(legend.title=element_blank())->p2
+#ap grid.arrange(p1,p2)
 ```
 
-The graphs above tell us that crime is not evenly distributed across police precincts. You can see how the Bronx has crime consolidated into a smaller number of precincts, while Manhattan has crime distributed across more numerous precincts. All Boroughs seem to have a precinct or two that handle far more crime, perhaps twice as much crime, as other precincts in the same Borough.  
 
-**When: has crime changed over time? When, during the year, week or day, does crime take place?**  
-
-* General Decreasing Trend over 2006 to 2016  
-
-**Jingbo Plot - Need updated lower plot only, refer doc ** 
-
-We can see from this graph that the total amount of crime has decreased over the past ten years. (We have zoomed in on this graph to more easily detect the differences, noting that we’re looking at about 12% of the range of that axis.) By looking closely, we can see that the total crime level has decreased every year except 2012, but 2012 didn’t rise above 2010. We do see an overall decreasing trend.  
-
-* Do we see similar decreases at all levels?   
-
-In considering the decreasing trend, we note different patterns depending upon the Level of crime we’re examining.
-
+* The total frequency over each year has a trend of declining. This may be due to lots of cases occurred over the years haven't been reported yet. It makes sense the later the more cases expected to be reported. But doesnt seem to explain the big decreasing in # of cases reported over the year. Most likely the crime is decreasing over the year!!
+* The big difference between Start and Report in Year 2016 again mostly like is because a lot of cases occurred in Year 2016 haven't been able to be presented in this figure due to span of DateReport cut off at Dec. 31,2016. 
+* Number of Cases with DateStart earlier than Jan. 1, 2000 are very small.
+\
+\
 ```{r}
 #picking non-missing DateStart and filter only those after "2000-01-01", 5560408 obs.
 crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2000-01-01"))->df_Date
+```
 
+```{r}
 #time series of daily frequency of 3 crime categories 2006-2016
 df_Date%>%group_by(DateStart,Level)%>%dplyr::summarise(count=n())%>%ungroup()%>%group_by(Level)%>%mutate(mon_mean=rollmean(count,30,fill=NA))%>%ungroup()->byDateLawMean
 
@@ -692,52 +692,116 @@ byDateLawMean%>%ggplot()+
   ggtitle("Daily Crime Frequency since 2000 with 30-day running mean")+
   labs(x="Date",y="Frequency")+theme(legend.title=element_blank())+geom_line(aes(DateStart,count*0+1150))
 
+#Top 9 daily rate falls on Jan 1.
+byDateLawMean%>%arrange(dplyr::desc(count))%>%filter(count>=count[9])%>%
+  mutate(DateStart=as.factor(DateStart))%>%
+  ggplot(aes(forcats::fct_reorder(DateStart, count),count))+geom_bar(stat="identity")+coord_flip()+ylab("Top 9 Daily Crime Frequency")+xlab("Date")
+```
 
-```   
+* The time series of crime frequency is decreasing over the years, consistent with shown in the cleveland dot plots of total count by year.  
+* There are obvious annual variation/cycle. 30-day running mean shows the cycle clearly.
+* There are spikes in the misdemeanor category and also felony category before 2006. The top 9 dates with high frequency are shown in the barchart. They are on January 1 on almost each year from 2000-2016 except 2015 which is actually very close behind. When reported, cases tend to be rounded onto Jan. 1 as occurrence date.
+\
+\
+```{r}
+plotyearlycnt<-function(df,var){
+  if(var=="ALL") {df->dff} else {df%>%filter(Level==var)->dff}
+  dff%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+  dff%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+  cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+  ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()->p
+  return(p)
+}
 
-One view is this daily chart. It shows a cyclical, annual pattern, as well as the overall downward trend. We also see strange spikes around the start of every year.These spikes are, in fact, on January 1, and we see that the highest number of crimes across the entire dataset are on January 1 through the years.  
+var=c("ALL","FELONY","MISDEMEANOR","VIOLATION"); plots<- vector("list", 4)
+pos=matrix(c(0.8,0.75,0.7,0.75,0.3,0.4,0.5,0.7),nrow = 4, ncol = 2, byrow = TRUE)
 
-This could be a data quality issue: where the date of the crime is unknown, and hence labelled as the first of the year. This could also be a true phenomenon associated with New Year’s Day, with more crime happening on that day. It could be some of each. We have left it as it stands in the dataset, but it shows up in the following graphs because of the large outliers that they are.  
-
-If we group the data into annual volumes, the trends become a little clearer, still.  
-
-*3 plots*  
-
-Felonies dropped considerably from 2006 to 2009, but then seemed to stabilize at a new level, approximately 12% lower than 2006.  
-
-Misdemeanors experienced a similar drop, but later. Misdemeanors held steady through 2010, then dropped in five straight years to reach, again, about a 12% drop by 2015. It is almost as if the police were focusing on Felonies, gained some, then turned their attention to Misdemeanors, but since the volume of Misdemeanors is nearly twice that of Felonies, the police would have to be twice as efficient in stopping Misdemeanors.  
-
-Violations dropped but then went back up. It seems that violations may be a matter of enforcement more than trends in attempts, so this could be related to the enforcement efforts on reducing Felonies and Misdemeanors.  
-
-*Do we need a graph with starting point here *  
-
-* Have Drugs and Violent crime decreased as well?  
-
-*Jingbo's plot*
-
-When we focus on Violent Crime, we see some features from the Felony graph (the drop from 2006 to 2009, the spike at 2012), but most years have a level around 93,000 to 94,000 such crimes which make the other years look almost like outliers, rather than part of a trend.   
+for (i in 1:4){plotyearlycnt(crime_df,var[i])+theme(legend.title=element_blank(),legend.position=pos[i,])+ggtitle(var[i])->plots[[i]]}
+grid.arrange(plots[[1]],plots[[2]],plots[[3]],plots[[4]],nrow=2)
+```
 
 
-*Jingbo's plot*
 
- Dangerous Drugs, however, follows the pattern we saw in the Misdemeanor case: after 2012, the yearly rate is lower. Progress seems to have been made.  
- 
-* Time of year and Time of day  
+```{r}
+#frequency by month
+df_Date%>%mutate(Month=as.character(month(DateStart)))%>%group_by(Month,Level)%>%dplyr::summarise(CntByMon=n())->byDateLaw_mon
 
-Again, we’ll work from the Macro (years) to the Micro. These graphs will tell us more specifics about when crime happens more (or less). 
+byDateLaw_mon%>%mutate(Days=rep(31,3))%>%mutate(Days=ifelse(Month=="2",28,Days))%>%mutate(Days=ifelse(Month %in% c("4","6","9","11"),30,Days))->byDateLaw_mon
+byDateLaw_mon%>%ggplot(aes(fct_relevel(Month,"10","11","12",after=9),CntByMon/Days))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency (Monthly Mean)")+facet_wrap(~Level,scales="free_x")+xlab("Month")->p1
+```
 
-*Jingbo Plots - Modify axis labels visibility *
+```{r}
+#frequency by day
+df_Date%>%mutate(Day=as.factor(format(DateStart,"%d")))%>%group_by(Day,Level)%>%dplyr::summarise(CntByDay=n())->byDateLaw_day
 
-Several observations:  
-* **Month**: We can easily see that crime peaks in the summer, or when weather is warmer, as the bar graphs for all three Levels tend to bulge from June through September. The exception is in January, which may be due to the irregular January 1 data (see above)  
-* **Day of the Month**: There seems to be no difference, except for the first of the month. That could indicate a similar phenomenon as the January 1 phenomenon.  
-* **Day of the Week**: Most crimes on Friday, least on Sunday. People going out on Friday night?  
-* **Hour of the Day**: a peak around lunch and again after work, a lull after the bars have been closed for an hour. In other words, times when the streets are filled with people have more crime than when most people are asleep.
+#Day1-28 has the same total cnts=11yrs*12cnts/yr
+#Day 29 cnts=11yrs*11cnts/yr+3cnts (leap yrs)
+#Day 30 cnts=11*11; Day 31 cnts=7*11
+byDateLaw_day%>%mutate(cnts=rep(12*11,3))%>%mutate(cnts=ifelse(Day=="29",11*11+3,cnts))%>%mutate(cnts=ifelse(Day=="30",11*11,cnts))%>%mutate(cnts=ifelse(Day=="31",7*11,cnts))->byDateLaw_day
 
-We can look more closely at the Hour of the Day to see if types of crime vary by hour of the day.  
+byDateLaw_day%>%ggplot(aes(Day,CntByDay/cnts))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency (Daily Mean)")+facet_wrap(~Level,scales="free_x")+xlab("Day of Month")->p2
+```
 
-```{r fig.height=10}
 
+```{r}
+#frequency by weekday
+df_Date%>%mutate(Wkday=as.factor(weekdays(DateStart,abbreviate=TRUE)))%>%group_by(Wkday,Level)%>%dplyr::summarise(CntByWkday=n())->byDateLaw_wkday
+
+byDateLaw_wkday%>%ggplot(aes(fct_relevel(Wkday,"Mon","Tue","Wed","Thu","Fri","Sat","Sun"),CntByWkday))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~Level,scales="free_x")+xlab("Day of Week")->p3
+```
+
+```{r}
+#picking non-missing TimeStart
+crime_df%>%filter(!is.na(TimeStart))%>%filter(DateStart>=as.Date("2006-01-01"))->df_FRTM
+
+#Frequency by hour of day, combining hour 00 and hour 24 into hour 00
+df_FRTM%>%mutate(Hour=as.factor(substr(TimeStart,1,2)))%>%group_by(Hour,Level)%>%dplyr::summarise(CntByHour=n())->byDateLaw_hour
+byDateLaw_hour$Hour[byDateLaw_hour$Hour=="24"]<-"00"
+byDateLaw_hour$Hour<-factor(byDateLaw_hour$Hour)
+
+byDateLaw_hour%>%ggplot(aes(Hour,CntByHour))+geom_bar(stat="identity")+coord_flip()+ylab("Crime Frequency")+facet_wrap(~Level,scales="free_x")+xlab("Hour of Day")->p4
+```
+
+```{r fig.height=4,fig,width=6}
+grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
+
+* Indeed by barcharting over the months,we see Jun.-Oct. is a high crime season.
+* The spike in Janurary is consistent with the analysis above. 
+* There seemed having a tendency of rounding every 5 day.
+* Violation is low during weekends but same during weekdays.
+* Felony and misdemeanor is high on Friday but low on Sunday nad Monday.
+* There is obvious day cycle in the crime occurrence. Early morning has the least crime occurrence while later afternoon has the most crime occurrence.
+\
+\
+```{r fig.height=4.7,fig.width=5.5}
+#how the different crime types (OffenseDesc) associated with different places (a heatmap)
+crime_df%>%
+  select(ClassCode,PremDesc)%>%
+  filter(!is.na(PremDesc))%>%
+  group_by(ClassCode,PremDesc)%>%dplyr::summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyPREM
+
+#merging to get OffenseDesc vs PremDesc correspondence
+match_code_desc%>%mutate(ClassCode=as.factor(ClassCode))->match_code_desc
+merge(byKYbyPREM, match_code_desc, by.x='ClassCode', by.y='ClassCode')->byKYbyPREM_match
+
+byKYbyPREM_match%>%group_by(OffenseDesc)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(dplyr::desc(mean))->desc_desc_cnt
+byKYbyPREM_match%>%group_by(PremDesc)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE)%>%arrange(dplyr::desc(mean))->PREM_desc_cnt
+
+byKYbyPREM_match%>%
+  ggplot(aes(fct_relevel(as.factor(OffenseDesc),as.character(desc_desc_cnt$OffenseDesc[sort(desc_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
+  fct_relevel(as.factor(PremDesc),as.character(PREM_desc_cnt$PremDesc[sort(PREM_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow","green","blue","violet"),na.value="black")+
+  scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+geom_tile(color="white",size=0.25)+
+  theme(axis.text.x = element_text(size=3,angle = 45, hjust =1), axis.text.y=element_text(size=4),  legend.position="top",legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),
+        legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Premises")+xlab("OffenseDesc")
+```
+
+
+* Doesn't seem having association between crime types and premises.
+\
+\
+```{r fig.height=4.5,fig.width=4}
 #how the different crime types associated with time using heatmap
 crime_df%>%
   select(ClassCode,TimeStart)%>%
@@ -763,6 +827,7 @@ byKYbyFRTM_match%>%ggplot(aes(
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Hour")+xlab("OffenseDesc")
 ```
 
+<<<<<<< HEAD
 *Jingbo check if you want to modify the variable names in R code above, also try changing percent from pct to percent or something, I got misled that its precinct * 
 
 
@@ -948,11 +1013,38 @@ We can see from the data that crime does not appear to be affected significantly
 
 
 
+=======
+>>>>>>> 5caf3443e85d11ffa0f024a03d34de46393b2636
+
+* Do we see any association between time and certain crime? Do see some high density around middle up right area, which is consistent with the barcharting daily cycle.
+\
+\
+```{r fig.height=4.5}
+#matching Pct with Boro
+crime_df %>% select(Level,Pct)%>%group_by(Level,Pct)%>%
+  drop_na()%>%dplyr::summarize(count = n())%>%ungroup()->df_pct
+merge(df_pct,match_pct_boro,by.x="Pct",by.y="Pct")->df_pbl
+df_pbl%>%mutate(Pct=as.factor(Pct))->df_pbl
+
+df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("red","orange","yellow","green","blue","violet"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
+        legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p5
+df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
+        legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p6
+grid.arrange(p5,p6,nrow=1)
+```
+
+* Crime frequency by Pct with either borough name colored or crime Level colored. 
+\
+\
+```{r}
+crime_df%>%filter(!is.na(ParkName))->df_pk
+df_pk%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))%>%ggplot(aes(Level,RelFreq))+geom_bar(stat="identity")+
+  coord_flip()+ylab("Level of Offense")+xlab("Relative Frequency")
+```
+\
+\
+* ~12538 cases recorded as occurred in parks/playground or greenspaces. The crime level distribution share the same pattern as the overall data. 
+\
+\
 
 
-
-
-
-### Executive Summary 
-### Interactive Component
-### Conclusion 
