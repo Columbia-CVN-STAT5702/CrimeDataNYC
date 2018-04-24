@@ -702,23 +702,65 @@ byDateLawMean%>%arrange(dplyr::desc(count))%>%filter(count>=count[9])%>%
 \
 \
 ```{r}
-plotyearlycnt<-function(df,var){
-  if(var=="ALL") {df->dff} else {df%>%filter(Level==var)->dff}
-  dff%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
-  dff%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
-  cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
-  ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()->p
-  return(p)
-}
+crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.75))->p1
 
-var=c("ALL","FELONY","MISDEMEANOR","VIOLATION"); plots<- vector("list", 4)
-pos=matrix(c(0.8,0.75,0.7,0.75,0.3,0.4,0.5,0.7),nrow = 4, ncol = 2, byrow = TRUE)
+crime_df%>%filter(Level=="FELONY")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="FELONY")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.7,0.75))+ggtitle("FELONY")->p2
 
-for (i in 1:4){plotyearlycnt(crime_df,var[i])+theme(legend.title=element_blank(),legend.position=pos[i,])+ggtitle(var[i])->plots[[i]]}
-grid.arrange(plots[[1]],plots[[2]],plots[[3]],plots[[4]],nrow=2)
+crime_df%>%filter(Level=="MISDEMEANOR")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="MISDEMEANOR")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.3,0.4))+ggtitle("MISDEMEANOR")->p3
+
+crime_df%>%filter(Level=="VIOLATION")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="VIOLATION")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.7))+ggtitle("VIOLATION")->p4
+
+grid.arrange(p1,p2,p3,p4,nrow=2)
 ```
 
+```{r}
+crime_df%>%filter(OffenseDesc == "DANGEROUS DRUGS")%>% select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD_F
 
+crime_df%>%filter(OffenseDesc == "DANGEROUS DRUGS")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD_F
+
+cbind(totalCntByRD_F,totalCntBySD_F[,2])%>%gather(key,value=count,-Year)->totalCnt_F
+ggplot(totalCnt_F)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position = c(0.8,0.7))+ggtitle("DANGEROUS DRUGS")->p1
+
+crime_df%>%filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                OffenseDesc == "FELONY ASSAULT" | 
+                                OffenseDesc == "RAPE" |
+                                OffenseDesc == "ROBBERY" |
+                                IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                IntOffenseDesc == "ASSAULT 3" |
+                                IntOffenseDesc == "RAPE 1" |
+                                IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                IntOffenseDesc == "SEXUAL ABUSE" |
+                                IntOffenseDesc == "SEXUAL ABUSE 3,2")%>% select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD_F
+
+crime_df%>%filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                OffenseDesc == "FELONY ASSAULT" | 
+                                OffenseDesc == "RAPE" |
+                                OffenseDesc == "ROBBERY" |
+                                IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                IntOffenseDesc == "ASSAULT 3" |
+                                IntOffenseDesc == "RAPE 1" |
+                                IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                IntOffenseDesc == "SEXUAL ABUSE" |
+                                IntOffenseDesc == "SEXUAL ABUSE 3,2")%>% select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD_F
+
+cbind(totalCntByRD_F,totalCntBySD_F[,2])%>%gather(key,value=count,-Year)->totalCnt_F
+ggplot(totalCnt_F)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position = c(0.3,0.75))+ggtitle("Violent Crime")->p2
+grid.arrange(p1,p2,nrow=2)
+```
 
 ```{r}
 #frequency by month
