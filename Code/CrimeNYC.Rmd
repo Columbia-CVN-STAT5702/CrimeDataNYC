@@ -6,6 +6,13 @@ due date: April 26, 2018
 output: html_document
 ---
 
+[Introduction](#introduction)  
+[Description of Data](#description-of-data)  
+[Main Analysis](#main-analysis)  
+[Executive Summary](#executive-summary)  
+[Interactive Component](#interactive-component)  
+[Conclusion](#conclusion)  
+
  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE,
@@ -30,10 +37,13 @@ library(vcdExtra)
 library(gridExtra)
 library(tidyverse)
 library(data.table)
+
+library(lubridate)
+library(RColorBrewer)
 ```
 
 
-## Introduction
+### Introduction
 
 Crime has long been a story in New York City. Many of us have witnessed significant changes in both the frequency of crime and the most prevalent types of crime that have dominated New York City in the last 30 years.
 
@@ -60,7 +70,7 @@ Team Members and main roles:
 * Jingbo Wu:  Data description; Data Quality Analysis; Partial Main Analysis including time series, frequency analysis on different time scale (annual cycle, monthly cycle, weekly cycle, daily cycle); heatmaps; frequency by Precincts   
 
 
-## Description of Data 
+### Description of Data 
 
 #### Main Data Set
 
@@ -195,7 +205,6 @@ grid.arrange(pl1,pl2,pl3,pl4,nrow=2)
 * As shown in the figure, the amount of such cases is very small. In our main analysis, we will focus on cases with *DateStart* after Jan. 1, 2000 up until Dec. 31, 2016 in total over 5.57M. Cases with *DateStart* earlier than Jan. 1, 2000 are totaled 1549 which will be ignored.
 
 
-
 #### Missing Premises Description *(PremDesc)*
 
 ```{r}
@@ -320,19 +329,343 @@ barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20)
 \
 * The 5 geolocation variables have the same missing pattern as expected. So we only need to look at one of them to examine the missing. In the data document, it stated that "to protect victim identities, rape and sex crime offenses are not geocoded". We want to see if the missing of geo variables are mostly related with those crime? Is there a lot of missing for other crimes too?
 
-* The missing in geolocation is obviously not random. When examine the spatial pattern of the crimes, we have to bear in mind that particular crimes will not appear on the map due to missing not at random. 
+* The missing in geolocation is obviously not random. When examine the spatial pattern of the crimes, we have to bear in mind that particular crimes will not appear on the map due to missing not at random.   
 
+### Main Analysis 
 
-# 4. Main Analysis 
+Crime in New York is a rich and varied topic, a topic which allowed us to explore many angles and use many techniques. Below, you will find graphs, and the insights derived from them, organized around the concepts of **What**, **Where**, **When** and **Why**.  
+
+**What: What kinds of crimes have been happening?**   
+
+* Breakdown of crime by Level (Misdemeanors, Felonies, then Violations)  
+
+First, we will examine the broadest categorization of crime: the legal level of the offense. In the raw dataset, this field is called “LAW_CAT_CD”, and we have shortened that the **Level**.
+
 ```{r}
-crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
-crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2000)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+# Remove Invalid Dates 
+crime_df <- crime_df %>% filter(year(DateStart)>2005)
+```  
 
-cbind(rbind(data.frame(Year=2000:2005,Report=NA),totalCntByRD),
-      totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
-ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank())->p1
-totalCnt%>%filter(Year>=2006)%>%ggplot()+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+ylim(2006,2016)+theme(legend.title=element_blank())->p2
-grid.arrange(p1,p2)
+```{r fig.height=3, fig.width=6}
+crime_level <- crime_df %>%
+                  group_by(Level) %>%
+                  summarize(count=n()) %>%
+                  mutate(freq= count/sum(count)*100) 
+  
+ggplot(crime_level, aes(reorder(Level, freq), freq)) +
+   geom_bar(stat="identity") +
+   coord_flip() +
+   xlab("Level of offense") + 
+   ylab("Count in Percent") +
+   ggtitle("Distribution of Crime Levels") 
+```
+
+
+What we see in this graph is how much of crime is accounted for by Misdemeanors (around 58%), followed by Felonies (around 30%), and then Violations(12%).  
+
+* Normal distribution of daily crime level of those levels  
+
+
+```{r}
+# see shape of the daily counts... normal?
+daily_df <-crime_df %>% 
+              group_by(DateStart,Level) %>% summarize(CrimeCount=n())
+
+ggplot(daily_df, aes(x=CrimeCount)) +
+  geom_density(aes(group=Level, color=Level, fill=Level), alpha=0.3) +
+  ggtitle("Density Curves of Daily Crime Count by Level of Crime")
+```  
+
+
+Another view of the Level of crimes is on a daily basis. We can see how the more numerous the Level of crime is, the more variation there is on a daily basis. All three Levels seem normally distributed, although the Misdemeanor Level has a bit of a plateau at the top, and there is a very, very long tail to the Violation data, suggesting a small number of days with record violations (January 1, 2010, 1,473 violations were recorded. We will discuss the January 1 phenomenon below).
+
+* Leading types of crimes  
+Now let’s look a layer deeper. The dataset includes codes and descriptions that give us another level of granularity in the type of offense reported. The OffenseDesc (OFNS_DESC) tells us more.
+
+```{r fig.height=4, fig_width = 6}
+  crime_top <- crime_df %>% 
+                  filter(OffenseDesc!="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  mutate(rel_freq = count/sum(count)) %>%
+                  top_n(n=15, wt=count)
+
+  ggplot(crime_top, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+    geom_col() + 
+    coord_flip() +
+    xlab("Offense Category") +
+    ylab("Crime Count Frequency") +
+    ggtitle(" Top Crime Offense Categories")
+  
+
+```
+
+We can see from this graph that Petit Larceny accounts for the largest number of crimes in New York City, followed, but not very closely, by Harrassment 2, and then Assault 3 & Related Offenses. 
+
+In examining this list, we had two things jump out at us:
+Assault, third on the list, and over 10% of all crime, seems pretty serious. We decided to take a closer look at all violent crimes because of this (and the fact that when you are concerned about crime, violent crime is the most frightening kind).
+Dangerous Drugs, sixth on this list, is another category of note, particularly with the way trends in drug abuse reach the news with alacrity, and a number of states of legalized use of Marijuana.
+
+As such, we intend to examine those categories of crime in addition to trends by Level.
+
+**Where: Where does crime take place? **  
+
+The question of where crime happens has multiple perspectives of import:  
+
+* Where would I choose to live or work to avoid crime?  
+* Should we adjust policing strategies to try to reduce crime in high crime areas?
+
+
+**Borough Analysis**  
+
+Like Level is to Crime as a whole, Borough is to The City of New York. The first question about location is the most macro: how does crime differ in the five Boroughs?  
+
+* Total vs. Per Capita by Level
+
+```{r fig.height=5, fig.width=10}
+
+# bring in Borough Population and massage it
+bdf <- fread("../Data_Files/BoroughPop.csv")
+bdf <- bdf[1:6,]
+bdf$Boro <- c("TOTAL","BRONX","BROOKLYN","MANHATTAN","QUEENS","STATEN ISLAND")
+
+# summarize for mosaic, per capita plots
+df_bsum <-crime_df %>% 
+  filter(!is.na(Boro)) %>%
+  group_by(Boro,Level) %>% 
+  summarize(Freq = n())
+
+# merge in the borough population
+df_bsum <- merge(df_bsum, bdf, by="Boro")
+
+# per capita calculation
+df_bsum$PerCap <-df_bsum$Freq/df_bsum$`2016 Estimate`
+
+# Mosaic By Count"
+mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime by Borough by Level", labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,2.2), offset_varnames = c(1,0,0,5.0), just_labels=c("left", "left", "left", "center")))
+   
+
+```
+
+The first thing we can see is that there is more crime in Brooklyn than any other Borough, and the amount of crime in Staten Island is very small. However, crime is committed by people, and the number of people in each Borough is different. Hence, we should look at Crime Per Capita.
+
+
+```{r fig.height=5, fig.width=10}
+# By Per Capita -- you have to have "Freq" be the column for the thing the Mosaic will use for frequency, so 
+# for Per Capita, you need to swap the Freq column names
+colnames(df_bsum)[colnames(df_bsum)=="Freq"] <- "Count"
+colnames(df_bsum)[colnames(df_bsum)=="PerCap"] <- "Freq"
+mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime per Capita by Borough by Level",labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,2.2), offset_varnames = c(1,0,0,5.0), just_labels=c("left", "left", "left", "center")))
+```
+
+By looking at the 2010 Census data by Borough, and comparing that to the overall crime per Borough, we see that the Per Capita view shows a rather different story of crime. Staten Island, due to its small population, actually has a higher crime **rate** than some other boroughs. In fact, we see less crime per capita in Queens and Brooklyn than the overall crime totals would have us understand
+  
+* Crime by Level, Borough and Time 
+
+We also have official estimates of the population for 2016, so we can look at both Level and Time, comparing 2010 Per Capita to 2016 Per Capita.  
+
+```{r fig.height=8, fig.width=8}
+#need to rename the bdf Boro in order to make the merge work
+colnames(bdf)[colnames(bdf)=="Boro"] <- "Boro"
+
+# limit to specific years of the population data and test
+# start with 2010
+# summarize for mosaic, per capita plots
+df_bsum2010 <-crime_df %>% 
+  filter(!is.na(Boro)) %>%
+  filter(DateStart > "2009-12-31" & DateStart < "2011-01-01") %>%
+  group_by(Boro,Level) %>% 
+  summarize(Freq = n())
+
+# merge in the borough population
+df_bsum2010 <- merge(df_bsum2010, bdf, by="Boro")
+
+# per capita calculation 
+df_bsum2010$PerCap <-df_bsum2010$Freq/df_bsum2010$`2010 Population`
+
+#2010 mosaic
+colnames(df_bsum2010)[colnames(df_bsum2010)=="Freq"] <- "Count"
+colnames(df_bsum2010)[colnames(df_bsum2010)=="PerCap"] <- "Freq"
+
+# now 2016 Estimate
+# summarize for mosaic, per capita plots
+df_bsum2016 <-crime_df %>% 
+  filter(!is.na(Boro)) %>%
+  filter(DateStart > "2015-12-31" & DateStart < "2017-01-01") %>%
+  group_by(Boro,Level) %>% 
+  summarize(Freq = n())
+
+# merge in the borough population
+df_bsum2016 <- merge(df_bsum2016, bdf, by="Boro")
+
+# per capita calculation
+df_bsum2016$PerCap <-df_bsum2016$Freq/df_bsum2016$`2016 Estimate`
+
+# By Per Capita -- you have to have "Freq" be the column for the thing the Mosaic will use for frequency, so 
+# for Per Capita, you need to swap the Freq column names
+
+#2016
+colnames(df_bsum2016)[colnames(df_bsum2016)=="Freq"] <- "Count"
+colnames(df_bsum2016)[colnames(df_bsum2016)=="PerCap"] <- "Freq"
+#mosaic(Level~Boro,df_bsum2016, direction=c("v","h"), main="2016 Crime per Capita by Borough by Level")
+
+#Plot 2010 year over 2016 year by Borough
+colnames(df_bsum2010)[colnames(df_bsum2010)=="Freq"] <- "PerCap10"
+colnames(df_bsum2016)[colnames(df_bsum2016)=="Freq"] <- "PerCap16"
+df_bsum.pcap <- merge(df_bsum2010,df_bsum2016, by=c("Boro","Level"))
+df_bsum.pcap$Count.y <- NULL
+df_bsum.pcap$Borough.y <- NULL
+df_bsum.pcap$"2010 Population.y" <- NULL
+df_bsum.pcap$"2016 Estimate.y" <- NULL
+
+tidy_bsum <- tidyr::gather(df_bsum.pcap, key="Year", value="PerCap", -"Boro", -"Level", -"Count.x", -"2010 Population.x", -"2016 Estimate.x", -"Borough.x")
+
+library(ggplot2)
+ggplot(tidy_bsum, aes(x=Year, y=PerCap, fill=Level))+
+  geom_bar(stat="identity",position="dodge") +
+  scale_fill_discrete(name="Year",
+  #breaks=c(1, 2),
+  labels=c("Felony", "Misdemeanor","Violation")) +
+  xlab("Year")+ylab("Per Capita Crime") +
+  facet_wrap(~Boro) +
+  ggtitle("Per Capita Crime Rates by Level by Borough by Time") 
+```
+  
+From these graphs, we see how there is an apparent drop in the rate of crime between 2010 and 2016, mostly driven by Misdemeanors (in every Borough, but most predominantly in the Bronx). We can see that the Felony rate has been mostly unchanged, except in Manhattan. Violations have gone up in every Borough except Staten Island. (We will explore more about crime over time in the When section.)  
+
+* Crime over two time periods
+
+```{r, fig.height=8}
+
+ggplot(tidy_bsum, aes(x=reorder(Boro, -PerCap), y=PerCap, fill=Year))+
+  geom_bar(stat="identity",position="dodge") +
+  scale_fill_discrete(name="Year",
+                      #breaks=c(1, 2),
+                      labels=c("2010 Census", "2016 Estimate")) +
+  xlab("Borough")+ylab("Per Capita Crime") +
+  facet_wrap(~Year+Level, scales = "free") +
+  theme(axis.text.x=element_text(angle=90,hjust=1))+
+  scale_fill_brewer(palette="Paired") +
+  ggtitle("Per Capita Crime Rates by Level by Borough by Time")  
+ 
+```
+
+From this view, we also see there there are some notable differences between Boroughs in the Per Capita Crime Rates. Manhattan leads the way on Felonies, followed by the Bronx. The top two are in opposite order for Misdemeanors. But it is Staten Island and the Bronx that lead in Violations. For lowest rates, Staten Island is lowest for Felonies, followed by Queens, with Queens lowest for Misdemeanors and Violations. Hence, the crime profile is quite different in each Borough.  
+
+* Main Categories of Crime by Borough  
+
+
+We can also get more specific about the top 6 types of crime, in terms of crime in the Boroughs.  
+
+```{r fig.height=5, fig.width=10}
+  top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAULT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
+  label_list   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEFF", "ASSAULT 3" , "GRAND LARCENY", "DANGEROUS DRUGS")
+ 
+  crime_sort <- crime_df %>% 
+                  filter(Boro != "") %>%
+                  filter(OffenseDesc %in% top_ofns) %>%
+                  group_by(Boro,OffenseDesc) %>% 
+                  summarize(Freq=n()) %>%
+                  mutate(rel_freq = Freq/sum(Freq))
+  
+  crime_sort$OffenseDesc <- factor(crime_sort$OffenseDesc)
+  
+  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,3.3), offset_varnames = c(1,0,0,7.6), just_labels=c("left", "left", "left", "center")), crime_sort)
+  
+```  
+
+Several observations can be made from this view:  
+1. Dangerous Drugs take up a disproportionately high share of crime in the Bronx, while in Queens, Dangerous Drugs account for far fewer of the crimes.  
+2. Larceny, both Petit and Grand, are a large share of crime in Manhattan when compared to other Boroughs.  
+3. Harassment 2 is the most prevalent of these top six in Staten Island  
+
+```{r fig.height=8, fig.width=12}
+  #doubledecker(TOP_OFFENSE~Boro, data=crime_sort)
+  ggplot(crime_sort, aes(OffenseDesc,Freq)) +
+    geom_col() +
+    ylab("Offense Count") +
+    xlab("Offense Description") +
+    facet_wrap(~ Boro) +
+    coord_flip() +
+    ggtitle(" Top Offense Categories Distribution in Different Boroughs")
+```
+
+This view makes the data easier to compare these types of crime within Boroughs. Brooklyn, for instance, has to most even distribution of crime across these categories, while Manhattan has much higher proportion of Petit Larceny than any of the other categories here. 
+Drugs and Violent Crime: This graph also reinforces how significantly Dangerous Drugs factor into crime in the Bronx, given how that category is nearly as prevalent as any other. It’s also worth noting where Assault factors in for each Borough: In Manhattan, it’s vastly outnumbered by each type of Larceny, relatively high in the Bronx and Queens, and sort of in the middle in Brooklyn.  
+
+
+* Location Analysis  
+
+The dataset includes a field called “PREM_TYP_DESC” (which we have shortened to **PremDesc**) to indicate where the crime took place, such as on the street, in a house, etc. It turns out that about 85% of crime occurs on the Streets or within a Residence of one type or another.  
+
+```{r fig.height=6, fig.width=12}
+  
+  crime_place <- crime_df %>%
+                 filter(!is.na(PremDesc),Level !="") %>%
+                 group_by(PremDesc) %>%
+                 summarize(count=n()) %>%
+                 top_n(n=10, wt=count) %>%
+                 mutate(rel_freq = count/sum(count))
+
+  
+  ggplot(crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    ylab("Crime Count Frequency") +
+    xlab("Place of Crime - Premises") +
+    ggtitle(" Top Ten Crime Premises")
+  
+```
+
+Here we see how crime on the Street is the largest, single category (nearly 40%), but if you add together the various Residence categories, Residences total 45%. This vastly outnumbers the Subway, Commercial buildings, etc.  
+
+```{r fig.height=6, fig.width=12}
+crime_place_2 <- crime_df %>%
+                 filter(!is.na(PremDesc),Level !="") %>%
+                 group_by(Level,PremDesc) %>%
+                 summarize(count=n()) %>%
+                 top_n(n=10, wt=count) %>%
+                 mutate(rel_freq = count/sum(count)) %>%
+                 ungroup() %>%
+                 arrange(Level, rel_freq) %>%
+                 unite("PremLevel", PremDesc, rel_freq, sep = "_", remove = FALSE) %>%
+                 data.frame() %>%
+                 mutate(PremLevel = factor(PremLevel, levels = PremLevel))
+
+  ggplot(crime_place_2, aes(PremLevel, rel_freq)) +
+    geom_bar(stat="identity") +
+    facet_wrap(~Level, scales="free") +
+    coord_flip() +
+    ylab("Crime Count Frequency") +
+    xlab("Place of Crime - Premises") +
+    scale_x_discrete(breaks=crime_place_2$PremLevel,labels=crime_place_2$PremDesc) +
+    ggtitle(" Place of Crime Distribution Across Crime Categories")
+  
+```
+While Felonies and Misdemeanors follow the same pattern as crime, overall, this graph shows that more Violations happen in Apartments than on the street.
+
+
+
+
+
+
+
+
+
+
+### Executive Summary 
+### Interactive Component
+### Conclusion 
+
+```{r}
+#ap crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+#ap crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2000)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+#ap 
+#ap cbind(rbind(data.frame(Year=2000:2005,Report=NA),totalCntByRD),
+#ap       totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+#ap ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank())->p1
+#ap totalCnt%>%filter(Year>=2006)%>%ggplot()+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+ylim(2006,2016)+theme(legend.title=element_blank())->p2
+#ap grid.arrange(p1,p2)
 ```
 
 
@@ -504,3 +837,5 @@ df_pk%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(R
 * ~12538 cases recorded as occurred in parks/playground or greenspaces. The crime level distribution share the same pattern as the overall data. 
 \
 \
+
+
