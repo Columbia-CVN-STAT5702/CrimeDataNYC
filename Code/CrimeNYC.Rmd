@@ -596,7 +596,7 @@ Drugs and Violent Crime: This graph also reinforces how significantly Dangerous 
 
 * Location Analysis  
 
-The dataset includes a field **shazbot** to indicate where the crime took place, such as on the street, in a house, etc. It turns out that about 85% of crime occurs on the Streets or within a Residence of one type or another.  
+The dataset includes a field called “PREM_TYP_DESC” (which we have shortened to **PremDesc**) to indicate where the crime took place, such as on the street, in a house, etc. It turns out that about 85% of crime occurs on the Streets or within a Residence of one type or another.  
 
 ```{r fig.height=4, fig.width=6}
   

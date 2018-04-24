@@ -227,43 +227,93 @@ leaflet(nyc_precincts) %>%
 
 #New edits
 #Generate scatterplot of crime vs precipitiation
-rain_summary_per_day <- crime_df %>% group_by(DateStart) %>% summarize(Count = n()) %>% drop_na()
+rain_summary_per_day <- crime_df %>% group_by(DateStart, Level) %>% summarize(Count = n()) %>% drop_na()
 #append weather data
-rain_summary_per_day <- cbind(rain_summary_per_day, weather_data) %>% select(DATE, PRCP, SNOW, TMAX, Count)
+rain_summary_per_day <- rain_summary_per_day %>% left_join(weather_data, by = c("DateStart" = "DATE")) %>% select(DateStart, Level, Count, PRCP)
 #Scatter plot of daily crimes vs. precipitation level
 
-lm1 <- lm(Count~PRCP, rain_summary_per_day)
-ggplot(rain_summary_per_day, aes(x=PRCP, y=Count)) + geom_point() +
-  labs(x = "Precipitation [inches]", y = "Daily Crime Incident Count", title = "Daily Crimes vs. Precipitation") +
-  geom_abline(slope=lm1[["coefficients"]][["PRCP"]],intercept=lm1[["coefficients"]][["(Intercept)"]])
+#Filter on Level of crime and generate linear model for each
+# linear model: Felonies
+f_df_rain <- rain_summary_per_day %>% filter(Level=="FELONY")
+flm_rain <- lm(Count~PRCP, f_df_rain)
+# linear model: Misdemeanors
+m_df_rain <- rain_summary_per_day %>% filter(Level=="MISDEMEANOR")
+mlm_rain <- lm(Count~PRCP, m_df_rain)
+# linear model: Violation
+v_df_rain <- rain_summary_per_day %>% filter(Level=="VIOLATION")
+vlm_rain <- lm(Count~PRCP, v_df_rain)
 
-#Average all days with common precipitation level and plot scatterplot
-avg_crime_per_precip_level <- rain_summary_per_day %>% group_by(PRCP) %>% summarize(Avg_Count = weighted.mean(Count))
-lm2 <- lm(Avg_Count~PRCP, avg_crime_per_precip_level)
-ggplot(avg_crime_per_precip_level, aes(x=PRCP, y=Avg_Count)) + geom_point() +
-  labs(x = "Precipitation [inches]", y = "Average Daily Crime Incident Count", title = "Average Daily Crimes vs. Precipitation") +
-  geom_abline(slope=lm2[["coefficients"]][["PRCP"]],intercept=lm2[["coefficients"]][["(Intercept)"]])
+#Plot data for all three crime levels vs precipitation with linear model results
+ggplot(rain_summary_per_day, aes(x=PRCP, y=Count, color=Level)) + 
+  geom_point(alpha=0.3) +
+  geom_abline(slope=flm_rain[["coefficients"]][["PRCP"]],intercept=flm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=420, label=paste0("y=",round(flm_rain[["coefficients"]][["PRCP"]],2),"x+",round(flm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=mlm_rain[["coefficients"]][["PRCP"]],intercept=mlm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=750, label=paste0("y=",round(mlm_rain[["coefficients"]][["PRCP"]],2),"x+",round(mlm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=vlm_rain[["coefficients"]][["PRCP"]],intercept=vlm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3, y=180, label=paste0("y=",round(vlm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vlm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  labs(x = "Precipitation [inches]", y = "Daily Crime Incident Count", title = "Daily Crime Counts vs. Precipitation by Level of Crime with Linear Models")
 
-#Regenerate plots for only violent crimes
+#Plot data only for violent crimes vs precipitation with linear model result
 #Generate scatterplot of crime vs precipitiation
-rain_summary_per_day <- violent_crime_df %>% group_by(DateStart) %>% summarize(Count = n()) %>% drop_na()
+vc_df_rain <- violent_crime_df %>% group_by(DateStart) %>% summarize(Count = n()) %>% drop_na()
 #append weather data
-rain_summary_per_day <- cbind(rain_summary_per_day, weather_data) %>% select(DATE, PRCP, SNOW, TMAX, Count)
+vc_df_rain <- vc_df_rain %>% left_join(weather_data, by = c("DateStart" = "DATE")) %>% select(DateStart, Count, PRCP)
 #Scatter plot of daily crimes vs. precipitation level
 
-lm1 <- lm(Count~PRCP, rain_summary_per_day)
-ggplot(rain_summary_per_day, aes(x=PRCP, y=Count)) + geom_point() +
-  labs(x = "Precipitation [inches]", y = "Daily Crime Incident Count", title = "Daily Violent Crimes vs. Precipitation") +
-  geom_abline(slope=lm1[["coefficients"]][["PRCP"]],intercept=lm1[["coefficients"]][["(Intercept)"]])
+#Generate linear model for Violent Crime vs. Precipitation
+vclm_rain <- lm(Count~PRCP, vc_df_rain)
 
-#Average all days with common precipitation level and plot scatterplot
-avg_crime_per_precip_level <- rain_summary_per_day %>% group_by(PRCP) %>% summarize(Avg_Count = weighted.mean(Count))
-lm2 <- lm(Avg_Count~PRCP, avg_crime_per_precip_level)
-ggplot(avg_crime_per_precip_level, aes(x=PRCP, y=Avg_Count)) + geom_point() +
-  labs(x = "Precipitation [inches]", y = "Average Daily Crime Incident Count", title = "Average Daily Violent Crimes vs. Precipitation") +
-  geom_abline(slope=lm2[["coefficients"]][["PRCP"]],intercept=lm2[["coefficients"]][["(Intercept)"]])
+ggplot(vc_df_rain, aes(x=PRCP, y=Count)) + 
+  geom_point(alpha=0.3) +
+  geom_abline(slope=vclm_rain[["coefficients"]][["PRCP"]],intercept=vclm_rain[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 3.5, y=240, label=paste0("y=",round(vclm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vclm_rain[["coefficients"]][["(Intercept)"]],0))) +
+  labs(x = "Precipitation [inches]", y = "Daily Violent Crime Incident Count", title = "Daily Violet Crime Counts vs. Precipitation with Linear Models")
+
+
 
 #New Plots for full moon analysis
-moon_summary <- crime_df %>% filter(phase == "Full Moon" | phase == "New Moon") %>% group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
+moon_summary <- crime_df %>% 
+  filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
+  group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
 moon_avg_crime <- moon_summary %>% group_by(phase) %>% summarize(Avg_Count = weighted.mean(Count))
+moon_total_crime <- moon_summary %>% group_by(phase) %>% summarize(Total_Count = sum(Count))
+moon_phase_total_count <- sum(moon_total_crime$Total_Count)
+moon_total_crime <- moon_total_crime %>% mutate(Pct = Total_Count/moon_phase_total_count)
+
+#Create a pie chart
+blank_theme <- theme_minimal()+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=14, face="bold")
+  )
+
+ggplot(data = moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y", start=0) +
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
+  ggtitle("Moon Phase vs. Crime Count Analysis")
+
+#Generate the same analysis based on Violent Crimes
+vc_moon_summary <- violent_crime_df %>% 
+  filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
+  group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
+vc_moon_avg_crime <- vc_moon_summary %>% group_by(phase) %>% summarize(Avg_Count = weighted.mean(Count))
+vc_moon_total_crime <- vc_moon_summary %>% group_by(phase) %>% summarize(Total_Count = sum(Count))
+vc_moon_phase_total_count <- sum(vc_moon_total_crime$Total_Count)
+vc_moon_total_crime <- vc_moon_total_crime %>% mutate(Pct = Total_Count/vc_moon_phase_total_count)
+
+ggplot(data = vc_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y", start=0) +
+  blank_theme +
+  theme(axis.text.x=element_blank()) +
+  geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
+  ggtitle("Moon Phase vs. Violent Crime Count Analysis")
 
