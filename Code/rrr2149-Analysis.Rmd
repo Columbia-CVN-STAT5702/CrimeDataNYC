@@ -1,0 +1,105 @@
+---
+title: "Rrr2149_Analysis"
+author: "Rashmi"
+date: "4/23/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This covers high level yearly symbiotic relationship between unemployment and NYC Crime Rate . 
+
+Preparing the data for yearly crime and avg unempleoyment count.
+
+```{r cars}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(vcdExtra)
+library(data.table)
+
+
+var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
+               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", 
+               "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+
+crime_df <- fread("~/Downloads/NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
+
+#Convert dates and times to correct format
+crime_df$DateStart <- as.Date(crime_df$DateStart, format='%m/%d/%Y')
+crime_df$DateEnd <- as.Date(crime_df$DateEnd, format='%m/%d/%Y')
+crime_df$DateReport <- as.Date(crime_df$DateReport, format='%m/%d/%Y')
+
+
+########################################################################################
+#Read in UnEmployment data from file
+
+UnEmployment_data <- fread("~/Desktop/Exploratory DataAnalysis/CrimeDataNYC/Data_Files/unempCSV.csv", na.strings="", stringsAsFactors = FALSE)
+
+UnEmployment_data$year <-as.character(UnEmployment_data$Year)
+names(UnEmployment_data)[names(UnEmployment_data) == 'Ann Avg'] <- 'AnnAvg'
+#UnEmployment_data
+UnEmployment_data<-UnEmployment_data %>% select("year","AnnAvg")%>% drop_na()
+
+
+crime_df%>%mutate(year=as.character(year(DateReport)))%>%group_by(year)%>%dplyr::summarise(CntByYear=n())%>% drop_na()->crime_df
+
+
+crime_df <- merge(x=crime_df,y=UnEmployment_data,by.x="year",by.y="year")
+crime_df
+
+
+
+```
+
+Lets prepare the yearly unemployment vs crime ratio  .
+On a close look this can be observed that  ther is a  slight increase in the ratio  starting from 2006 though 2008 followed by there is a huge increase  past 2009 and the trend continue with minimal variation  untill 2013. the ratio unemployment vs crime is again decreaing pst 2013.
+
+Relationship between Crime and Un-Employment
+
+```{r}
+### Relationship between max temp and crime volume
+# set up the data by day and Level
+crime_df <-crime_df %>% group_by(year) %>% summarize(CrimeCount=sum(CntByYear),AnnAvg,unEmpCrimeRatio =((AnnAvg)/sum(CntByYear)))
+# plot it -- well, plot it later after the linear models are run so we can see the linear slopes
+crime_df
+```
+
+Lets study the relationship more closely via below two plots.  
+2006/2007/2008  : Significant low unemployment rate, and the significantly high crime rate
+
+2009/2010/2011 : High un-employment rate Vs moderate crime
+
+2013 onwards the relationship between growth of unemployment and crime are mutual.
+
+
+```{r}
+require(gridExtra)
+x1 =ggplot(crime_df, aes(x=year,y=AnnAvg)) +
+  geom_point( alpha=0.3)+
+ylab("Annual Unemployment")+
+  ggtitle("Yearly uneployment clevland Plot")
+
+x2=  ggplot(crime_df, aes(x=year,y=CrimeCount)) +
+  geom_point( alpha=0.3)+xlab("crime count over 10 years")+
+ylab(" Yearly Crime count ")+
+  ggtitle("Yearly Crime Count clevland plot")
+grid.arrange(x1,x2)
+
+
+```
+
+
+The below study shows there  has been a variation in unemployemnt partten, this cuould be due to the fact that the USA East coast economy is influnced by unempleoyment which directly triggers the crime rate.
+late 2008 thrugh late 2009/early 2010 the employment was gretly influence by the recession as the economy staratd picking up slowly , employment started getting better shape and that is one of the potential factors to help decrease in crime rate. Better the economy less Crime.
+
+```{r}
+ggplot(crime_df, aes(x=year, y=unEmpCrimeRatio)) + 
+  geom_point(alpha=0.5) +
+  ggtitle(" Yearly crime Vs ")
+```
+

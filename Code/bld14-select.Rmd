@@ -66,7 +66,7 @@ The above is prep for the first plot.
 
 ```{r}
 # Mosaic By Count
-mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime by Borough by Level")
+mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime by Borough by Level",labeling=labeling_border(rot_labels=c(45,0,0, 0)))
 ```
 
 This shows crime totals by category, showing how there are fewer crimes in Staten Island than, say, Brooklyn
@@ -77,7 +77,7 @@ This shows crime totals by category, showing how there are fewer crimes in State
 # for Per Capita, you need to swap the Freq column names
 colnames(df_bsum)[colnames(df_bsum)=="Freq"] <- "Count"
 colnames(df_bsum)[colnames(df_bsum)=="PerCap"] <- "Freq"
-mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime per Capita by Borough by Level")
+mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime per Capita by Borough by Level",labeling=labeling_border(rot_labels=c(45,0,0, 0)))
 ```
 
 
@@ -104,7 +104,7 @@ df_bsum2010$PerCap <-df_bsum2010$Freq/df_bsum2010$`2010 Population`
 #2010 mosaic
 colnames(df_bsum2010)[colnames(df_bsum2010)=="Freq"] <- "Count"
 colnames(df_bsum2010)[colnames(df_bsum2010)=="PerCap"] <- "Freq"
-mosaic(Level~Boro,df_bsum2010, direction=c("v","h"), main="2010 Crime per Capita by Borough by Level")
+mosaic(Level~Boro,df_bsum2010, direction=c("v","h"), main="2010 Crime per Capita by Borough by Level",labeling=labeling_border(rot_labels=c(45,0,0, 0)))
 ```
 
 By looking at the 2010 Census data by Borough, and comparing that to the overall crime per Borough, we see that the Per Capita view shows a rather different story of crime. Staten Island, due to its small population, actually has a higher crime **rate** than other boroughs.

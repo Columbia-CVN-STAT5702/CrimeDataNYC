@@ -61,7 +61,7 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
       mainPanel(
         tabsetPanel(type = "tabs",
                     tabPanel("Map", value = 1,  leafletOutput("Nycgeomap",height = 625)),
-                    tabPanel("Plots", value = 2, plotlyOutput("DataPlot", height=800)),
+                    tabPanel("Summary", value = 2, plotlyOutput("DataPlot", height=800)),
                     #tabPanel("Precinct Map", value = 3, leafletOutput("NycPrecinctMap")),
                     id = "tabselected")
         
