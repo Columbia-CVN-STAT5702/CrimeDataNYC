@@ -702,6 +702,32 @@ byDateLawMean%>%arrange(dplyr::desc(count))%>%filter(count>=count[9])%>%
 \
 \
 ```{r}
+crime_df%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.75))->p1
+
+crime_df%>%filter(Level=="FELONY")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="FELONY")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.7,0.75))+ggtitle("FELONY")->p2
+
+crime_df%>%filter(Level=="MISDEMEANOR")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="MISDEMEANOR")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.3,0.4))+ggtitle("MISDEMEANOR")->p3
+
+crime_df%>%filter(Level=="VIOLATION")%>%select(DateReport)%>%mutate(Year=year(DateReport))%>%group_by(Year)%>%dplyr::summarise(Report=n())->totalCntByRD
+crime_df%>%filter(Level=="VIOLATION")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(Start=n())->totalCntBySD
+cbind(totalCntByRD,totalCntBySD[,2])%>%gather(key,value=count,-Year)->totalCnt
+ggplot(totalCnt)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position=c(0.5,0.7))+ggtitle("VIOLATION")->p4
+
+grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
+
+
+```{r}
 #frequency by month
 df_Date%>%mutate(Month=as.character(month(DateStart)))%>%group_by(Month,Level)%>%dplyr::summarise(CntByMon=n())->byDateLaw_mon
 
