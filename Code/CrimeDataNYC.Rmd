@@ -181,11 +181,12 @@ grid.arrange(p1,p2,p3,nrow=1)
 ```
 
 
-There are total of 655 complaints missing the crime Start Date. The missing data is distributed the same as non-missing data, so we are not concerned about this random-appearing missing data.
+There are total of 655 complaints missing the crime Start Date. The missing data is distributed the same as non-missing data, so we are not concerned about this random-appearing missing data.  
 
-When looking at the Date of the Report against the volume of missing Start Dates, we notice that the are far more missing Start Dates in the earlier time periods with the volume of missing leveling out after 2010.
-The frequency of missing Start Date by Level of Crime looks the same as the non-missing Start Date data.
-The frequency distribution of the Offense Code shares the same pattern as the non-missing Start Date data.
+* When looking at the Date of the Report against the volume of missing Start Dates, we notice that the are far more missing Start Dates in the earlier time periods with the volume of missing leveling out after 2010.  
+* The frequency of missing Start Date by Level of Crime looks the same as the non-missing Start Date data.  
+* The frequency distribution of the Offense Code shares the same pattern as the non-missing Start Date data.  
+
 
 #### Errors in Start-Date of Crime Reported
 
@@ -263,9 +264,8 @@ There are a very small number of cases where Precinct or Borough are missing (0.
 * There are about 16 cases where the Precinct shown is not consistent with the Borough in this manner. For those Precincts with such inconsistencies, the number of cases with a inconsistent Borough name range from 1 to 3 cases. This problem can be fixed by correcting the Borough names of those rare cases using a map of Pct vs Boro established from dataset.
 * 390 cases have a missing Pct. 463 cases have a missing Boro. 
 
-** This section below needs review, did not find in word,  I see that we are using this to correct and merge, so should we move to appropriate section **  
-\
-\
+#### Missing Description of Offense *(OffenseDesc)*
+
 ```{r}
 #match_pct_boro can be used to fix the problem of double/triple borough names of specific Pct
 crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summarise(count=n())%>%
@@ -278,9 +278,6 @@ crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summaris
 #merge(crime_df%>%select(-Boro),match_pct_boro, by.x="Pct",by.y = "Pct",all.x=TRUE)->crime_df
 ```
 
-
-#### Missing Description of Offense *(OffenseDesc)*
- 
 
 ```{r}
 #match_code_desc can be used to retrieve OffenseDesc(when missing) from ClassCode
@@ -900,6 +897,8 @@ weather_data$TMAX <- as.numeric(weather_data$TMAX)
 
 #Merge the data together
 crime_w_df <- crime_w_df[weather_data, on=.(DateStart = DATE)]
+#crime_w_df <-  merge(crime_df,weather_data,by="DateStart")
+
 #Generate plot to compare average number of crimes on cold days as compared to hot days
 hot_day_summary <- crime_w_df %>% filter(TMAX > 90) %>% group_by(Pct) %>% summarize(count_hot = n(), n_days_hot = n_distinct(DateStart), Hot = count_hot/n_days_hot) %>% drop_na() %>% select(Pct, Hot)
 cold_day_summary <- crime_w_df %>% filter(TMAX < 20) %>% group_by(Pct) %>% summarize(count_cold = n(), n_days_cold = n_distinct(DateStart), Cold = count_cold/n_days_cold) %>% drop_na() %>% select(Pct, Cold)
@@ -952,10 +951,68 @@ ggplot(daily_df, aes(x=MaxTemp, y=CrimeCount, color=Level)) +
   ggtitle("Daily Crime Counts vs. Temperature by Level of Crime with Linear Models")
 ```
 
-This shows us how temperature is related to crime in all three levels: the warmer it is, the more crime. The steepest slope is for Misdemeanors, meaning the greatest impact of temperature is on that level of crime, followed by Felonies.  
+This shows us how temperature is related to crime in all three levels: the warmer it is, the more crime. The steepest slope is for Misdemeanors, meaning the greatest impact of temperature is on that level of crime, followed by Felonies.    
+
+* Does temperature affect levels of Drug  and Violent crimes?  
+```{r}
+
+
+# include OffenseDesc and IntOffenseDesc into daily summary
+dailies_df <-crime_w_df %>% group_by(DateStart,Level,OffenseDesc,IntOffenseDesc) %>% summarize(CrimeCount=n(),MaxTemp=mean(TMAX))
+
+# create a table for Violent Crimes, Daily Count
+daily_violent_df <- dailies_df  %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                           OffenseDesc == "FELONY ASSAULT" | 
+                                           OffenseDesc == "MURDER & NON-NEGL. MANSLAUGHTER" |  
+                                           OffenseDesc == "RAPE" |
+                                           OffenseDesc == "ROBBERY" |
+                                           IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                           IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                           IntOffenseDesc == "ASSAULT 3" |
+                                           IntOffenseDesc == "RAPE 1" |
+                                           IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                           IntOffenseDesc == "SEXUAL ABUSE" |
+                                           IntOffenseDesc == "SEXUAL ABUSE 3,2") %>%
+                                  group_by(DateStart) %>%
+                                  summarize(CrimeCount=sum(CrimeCount),MaxTemp=mean(MaxTemp))
+
+
+# create a table for Dangerous Drug Crimes, Daily Count
+daily_drug_df <- dailies_df  %>% filter(OffenseDesc == "DANGEROUS DRUGS") %>% 
+                                  group_by(DateStart) %>% 
+                                  summarize(CrimeCount=sum(CrimeCount),MaxTemp=mean(MaxTemp))
+
+# derive linear model
+dvlm<- lm(CrimeCount~MaxTemp, daily_violent_df)
+
+# plot
+ggplot(daily_violent_df, aes(x=MaxTemp, y=CrimeCount)) + 
+  geom_point(alpha=0.5) +
+  geom_abline(slope=dvlm[["coefficients"]][["MaxTemp"]],intercept=dvlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=300, label=paste0("y=",round(dvlm[["coefficients"]][["MaxTemp"]],2),"x+",round(dvlm[["coefficients"]][["(Intercept)"]],0)))+
+  ggtitle("Daily Violent Crime Counts vs. Temperature by Level of Crime with Linear Model")+
+  scale_y_continuous(limits = c(0, 625))
+
+# derive linear model
+ddlm<- lm(CrimeCount~MaxTemp, daily_drug_df)
+# grab p-value
+ddlmp<-round(summary(ddlm)$coefficients[2,4],5) 
+
+# plot
+ggplot(daily_drug_df, aes(x=MaxTemp, y=CrimeCount)) + 
+  geom_point(alpha=0.5) +
+  geom_abline(slope=ddlm[["coefficients"]][["MaxTemp"]],intercept=ddlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=200, label=paste0("y=",round(ddlm[["coefficients"]][["MaxTemp"]],2),"x+",round(ddlm[["coefficients"]][["(Intercept)"]],0)," p-value:",ddlmp))+
+  ggtitle("Daily Dangerous Drug Crime Counts vs. Temperature by Level of Crime with Linear Model") +
+  scale_y_continuous(limits = c(0, 625))
+```
+
+For both Violent Crime and Dangerous Drugs, we see an effect of temperature: the warmer it is, the more crime. However, the effect is much stronger for Violent Crimes. While there is an effect for Dangerous Drugs, it is hard to perceive from the graph, but the slope is positive and the p-value is less than .001 for the linear model.
+
 
 * Precipitation
-We continue with our weather data to see if rain makes a difference in crime. It turns out that a bit of rain does seem to reduce crime a bit, as the slope-trend is negative
+
+We continue with our weather data to see if rain makes a difference in crime. 
 
 ```{r fig.width=8, fig.height=5}
 
@@ -1053,10 +1110,17 @@ s3 <- ggplot(dg_df_rain, aes(x=PRCP, y=Count)) +
 grid.arrange(s1,s2,s3)
 ```
 
+For all three Levels of Crime, we see negative slopes, indicating that more rain suggest less crime. This is not very surprising as we would expect less people to be out on days with bad weather. As with Temperature, the effect is stronger for the more numerous of crimes. 
 
-We can clearly see a reduction in the average number of crimes reported on days with significant precipitation.  This is not very surprising as we would expect less people to be out on days with bad weather.  The effect of increasing precipitation on misdemeanors appears to be the most significant, with a lesser impact on felonies and violations.  When looking at the same analysis after filtering only on Violent Crimes, we see a relationship very similar to that of felonies, which is what we would expect considering most violent crimes are felonies.
+A lot of the data is on days with no rain, and you can read right off the graph that there is a fairly wide range of daily crime rate. However, as the amount of rain starts to register, the density of the dots seem to shift downward.   
 
-A lot of the data is on days with no rain, and you can read right off the graph that there is a fairly wide range of daily crime rate on days with no rain. However, as the amount of rain starts to register, the density of the dots seem to shift downward, indicating that more rain = less crime. The pattern for Violent Crimes is similar, less violent crime on rainy days.
+* Does precipitation affect levels of Drug and Violent crimes?  
+
+When looking at the same analysis after filtering only on Violent Crimes, we see a relationship very similar to that of felonies, which is what we would expect considering most violent crimes are felonies.
+
+The pattern for Dangerous Drugs is similar: less violent crime on rainy days.
+
+
 
 * Full Moon
 
@@ -1132,6 +1196,8 @@ grid.arrange(pie1,pie2,pie3)
 ```
 
 We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
+
+*Graph note: We debated (hotly) about using Pie Charts for this data. On one hand, a bar chart would be at least equally capable of demonstrating the lack of difference the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and were were inspired by the moon!*
 
 
 
