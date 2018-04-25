@@ -29,11 +29,12 @@ var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport
 
 crime_df <- fread("~/Downloads/NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
 
+
 #Convert dates and times to correct format
 crime_df$DateStart <- as.Date(crime_df$DateStart, format='%m/%d/%Y')
 crime_df$DateEnd <- as.Date(crime_df$DateEnd, format='%m/%d/%Y')
 crime_df$DateReport <- as.Date(crime_df$DateReport, format='%m/%d/%Y')
-
+crime_df_master <-crime_df
 
 ########################################################################################
 #Read in UnEmployment data from file
@@ -88,7 +89,13 @@ x2=  ggplot(crime_df, aes(x=year,y=CrimeCount)) +
   geom_point( alpha=0.3)+xlab("crime count over 10 years")+
 ylab(" Yearly Crime count ")+
   ggtitle("Yearly Crime Count clevland plot")
-grid.arrange(x1,x2)
+
+
+x3= ggplot(crime_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")+
+  ggtitle("Yearly Crime Count")
+
+
+grid.arrange(x1,x2,x3,nrow=1)
 
 
 ```
@@ -101,5 +108,19 @@ late 2008 thrugh late 2009/early 2010 the employment was gretly influence by the
 ggplot(crime_df, aes(x=year, y=unEmpCrimeRatio)) + 
   geom_point(alpha=0.5) +
   ggtitle(" Yearly crime Vs ")
+```
+
+
+```{r}
+
+library(tidyr)
+crime_df_master
+
+crime_df_master%>%mutate(year=as.character(year(DateReport)))%>%group_by(year,Level)%>%dplyr::summarise(CntByYear=n())%>% drop_na()->crime_df_master1
+
+crime_df_master1 <- spread(crime_df_master1,Level,CntByYear)
+crime_df_master1
+write.csv(crime_df_master1, "crime_master.csv")
+
 ```
 
