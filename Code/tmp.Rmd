@@ -1,0 +1,155 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(forcats)
+library(vcdExtra)
+library(gridExtra)
+library(data.table)
+var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
+               "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", 
+               "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+
+crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
+
+crime_df%>%mutate(DateStart=as.Date(DateStart,format='%m/%d/%Y'),
+                  DateEnd=as.Date(DateEnd,format='%m/%d/%Y'),
+                  DateReport=as.Date(DateReport,format='%m/%d/%Y'))->crime_df
+
+```
+
+
+```{r fig.height=4}
+#For cases with missing geolocation (using Lat here), how they distribute over the code ClassCode
+
+crime_df%>%select(OffenseDesc,Lat)%>%filter(is.na(Lat))%>%filter(!is.na(OffenseDesc))%>%group_by(OffenseDesc)%>%dplyr::summarise(count=n())->tmp1
+
+crime_df%>%select(OffenseDesc)%>%filter(!is.na(OffenseDesc))%>%group_by(OffenseDesc)%>%dplyr::summarise(totalcnt=n())->tmp2
+
+merge(tmp1,tmp2,by.x="OffenseDesc",by.y="OffenseDesc",all.x=TRUE)->match_byOD
+match_byOD%>%mutate(percentage=100*count/totalcnt)->match_byOD
+
+  ggplot(match_byOD, aes(reorder(OffenseDesc,count), count)) +
+    geom_col() + theme(axis.text= element_text(size=4))+
+    coord_flip() +scale_x_discrete(label=function(x) abbreviate(x, minlength=15))+
+    xlab("Offense Category") +
+    ylab("Count") +
+    ggtitle("Cases Missing Location")->p1
+  
+    ggplot(match_byOD, aes(reorder(OffenseDesc,percentage), percentage)) +
+    geom_col() + theme(axis.text = element_text(size=4))+
+    coord_flip() +scale_x_discrete(label=function(x) abbreviate(x, minlength=15))+
+    xlab("Offense Category") +
+    ylab("Percentage") +
+    ggtitle("Cases Missing Location")->p2
+    
+    grid.arrange(p1,p2,nrow=1)
+```
+
+
+```{r}
+#frequency by month
+crime_df%>%select(DateStart,Level)%>%filter(!is.na(DateStart))%>%filter(DateStart>=as.Date("2006-01-01"))->df_Date
+
+df_Date%>%mutate(Month=as.character(month(DateStart)))%>%group_by(Month,Level)%>%dplyr::summarise(CntByMon=n())->byDateLaw_mon
+
+byDateLaw_mon%>%mutate(Days=rep(31,3))%>%mutate(Days=ifelse(Month=="2",28,Days))%>%mutate(Days=ifelse(Month %in% c("4","6","9","11"),30,Days))->byDateLaw_mon
+byDateLaw_mon%>%ggplot(aes(fct_relevel(Month,"10","11","12",after=9),CntByMon/Days/11))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=6))+coord_flip()+ylab("Crime Frequency (Daily)")+facet_wrap(~Level,scales="free_x")+xlab("Month")->p1
+```
+
+```{r}
+#frequency by day
+df_Date%>%mutate(Day=as.factor(format(DateStart,"%d")))%>%group_by(Day,Level)%>%dplyr::summarise(CntByDay=n())->byDateLaw_day
+
+#Day1-28 has the same total cnts=11yrs*12cnts/yr
+#Day 29 cnts=11yrs*11cnts/yr+3cnts (leap yrs)
+#Day 30 cnts=11*11; Day 31 cnts=7*11
+byDateLaw_day%>%mutate(cnts=rep(12*11,3))%>%mutate(cnts=ifelse(Day=="29",11*11+3,cnts))%>%mutate(cnts=ifelse(Day=="30",11*11,cnts))%>%mutate(cnts=ifelse(Day=="31",7*11,cnts))->byDateLaw_day
+
+byDateLaw_day%>%ggplot(aes(Day,CntByDay/cnts))+geom_bar(stat="identity")+theme(axis.text = element_text(size=6))+coord_flip()+ylab("Crime Frequency (Daily)")+facet_wrap(~Level,scales="free_x")+xlab("Day of Month")->p2
+```
+
+
+```{r}
+#frequency by weekday
+df_Date%>%mutate(Wkday=as.factor(weekdays(DateStart,abbreviate=TRUE)))%>%group_by(Wkday,Level)%>%dplyr::summarise(CntByWkday=n())->byDateLaw_wkday
+
+#whole 574 weeks between 2006-01-01 and 2016-12-31
+nwks=574
+byDateLaw_wkday%>%ggplot(aes(fct_relevel(Wkday,"Mon","Tue","Wed","Thu","Fri","Sat","Sun"),CntByWkday/nwks))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=6))+coord_flip()+ylab("Crime Frequency (Daily)")+facet_wrap(~Level,scales="free_x")+xlab("Day of Week")->p3
+```
+
+```{r}
+#picking non-missing TimeStart
+crime_df%>%filter(!is.na(TimeStart))%>%filter(DateStart>=as.Date("2006-01-01"))->df_FRTM
+
+#Frequency by hour of day, combining hour 00 and hour 24 into hour 00; 4018 days in 11yrs.
+nds=4018
+df_FRTM%>%mutate(Hour=as.factor(substr(TimeStart,1,2)))%>%group_by(Hour,Level)%>%dplyr::summarise(CntByHour=n())->byDateLaw_hour
+byDateLaw_hour$Hour[byDateLaw_hour$Hour=="24"]<-"00"
+byDateLaw_hour$Hour<-factor(byDateLaw_hour$Hour)
+
+byDateLaw_hour%>%ggplot(aes(Hour,CntByHour/nds))+geom_bar(stat="identity")+theme(axis.text = element_text(size=6))+coord_flip()+ylab("Crime Frequency (Hourly)")+facet_wrap(~Level,scales="free_x")+xlab("Hour of Day")->p4
+```
+
+```{r fig.height=7,fig,width=9}
+grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
+
+```{r}
+crime_df%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("ALL")->p1
+
+crime_df%>%filter(Level=="FELONY")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("FELONY")->p2
+
+crime_df%>%filter(Level=="MISDEMEANOR")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("MISDEMEANOR")->p3
+
+crime_df%>%filter(Level=="VIOLATION")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("VIOLATION")->p4
+```
+
+```{r}
+grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
+```{r}
+crime_df%>%filter(OffenseDesc == "DANGEROUS DRUGS")%>%select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("DANGEROUS DRUGS")->p1
+
+crime_df%>%filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                OffenseDesc == "FELONY ASSAULT" | 
+                                OffenseDesc == "RAPE" |
+                                OffenseDesc == "ROBBERY" |
+                                IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                IntOffenseDesc == "ASSAULT 3" |
+                                IntOffenseDesc == "RAPE 1" |
+                                IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                IntOffenseDesc == "SEXUAL ABUSE" |
+                                IntOffenseDesc == "SEXUAL ABUSE 3,2")%>% select(DateStart)%>%mutate(Year=year(DateStart))%>%filter(Year>=2006)%>%group_by(Year)%>%dplyr::summarise(count=n())->totalCntBySD
+ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$count)*0.95,max(totalCntBySD$count)*1.05)+coord_flip()+ggtitle("Violent Crime")->p2
+```
+
+```{r}
+grid.arrange(p1,p2,nrow=2)
+```
+

@@ -105,7 +105,7 @@ server <- function(input, output) {
   
   output$MapTypeSelect <- renderUI({
     selectInput(inputId = "maptype",
-                label = "Select Display Geographic Map",
+                label = "Select Map Type",
                 choices = c("Point "="point","Density"="density","Precincts (NYC ALL Boroughs)" ="precincts"),
                 selected = "Point")})
   
@@ -329,7 +329,7 @@ server <- function(input, output) {
   output$DataPlot <- renderPlotly({
     req(crime_data_filt())
     crimeSummary <- crime_data_filt() %>% group_by_(input$y, input$clr) %>% summarize(Count = n())
-    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = "reorder(eval(as.name(input$y)), Count, sum)", y = "Count", fill = input$clr)) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"))
+    p <- ggplotly(ggplot(data = crimeSummary, aes_string(x = "reorder(eval(as.name(input$y)), Count, sum)", y = "Count", fill = input$clr, label=input$y, label2="Count", label3=input$clr)) + geom_col() + coord_flip() + labs(x = input$y, y = "Crime Incidents"), tooltip = c("label", "label2", "label3"))
     p$elementId <- NULL
     p
   })
