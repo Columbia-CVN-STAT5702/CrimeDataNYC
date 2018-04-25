@@ -83,19 +83,19 @@ require(gridExtra)
 x1 =ggplot(crime_df, aes(x=year,y=AnnAvg)) +
   geom_point( alpha=0.3)+
 ylab("Annual Unemployment")+
-  ggtitle("Yearly uneployment clevland Plot")
-
+  
 x2=  ggplot(crime_df, aes(x=year,y=CrimeCount)) +
   geom_point( alpha=0.3)+xlab("crime count over 10 years")+
 ylab(" Yearly Crime count ")+
-  ggtitle("Yearly Crime Count clevland plot")
+ 
 
 
-x3= ggplot(crime_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")+
-  ggtitle("Yearly Crime Count")
 
 
-grid.arrange(x1,x2,x3,nrow=1)
+grid.arrange(x1,x2,nrow=1)
+ ggplot(crime_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")+
+ 
+
 
 
 ```

@@ -234,7 +234,6 @@ server <- function(input, output) {
       #map = leaflet(crime_map) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")%>% 
        # addWebGLHeatmap(lng=~Long, lat=~Lat,size=20,units='px') 
     }
-    
     else 
     {
       if(input$maptype =="density")
