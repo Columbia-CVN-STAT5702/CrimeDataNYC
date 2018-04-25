@@ -654,14 +654,17 @@ While Felonies and Misdemeanors follow the same pattern as crime, overall, this 
 In terms of where, we can also look at the police precincts. 
 
 
-```{r fig.height=3.5}
+```{r fig.height=5}
 #matching Pct with Boro
 crime_df %>% select(Level,Pct)%>%group_by(Level,Pct)%>%
   drop_na()%>%dplyr::summarize(count = n())%>%ungroup()->df_pct
 merge(df_pct,match_pct_boro,by.x="Pct",by.y="Pct")->df_pbl
 df_pbl%>%mutate(Pct=as.factor(Pct))->df_pbl
 
-df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+scale_fill_manual(values = c("red","orange","yellow","green","blue","violet"))+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
+df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Boro)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+ 
+  #scale_fill_manual(values = c("red","orange","yellow","green","blue","violet"))+
+  scale_fill_brewer(palette="Dark2") +
+  theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p5
 df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "identity") + xlab("Precint Number") + ggtitle("Incidents by Precinct") + coord_flip()+theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position=c(0.6,0.2),
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))->p6
@@ -785,7 +788,6 @@ cbind(totalCntByRD_F,totalCntBySD_F[,2])%>%gather(key,value=count,-Year)->totalC
 ggplot(totalCnt_F)+geom_point(aes(count,Year,color=key),size=5)+coord_flip()+theme(legend.title=element_blank(),legend.position = c(0.3,0.75))+ggtitle("Violent Crime")->p2
 grid.arrange(p1,p2,nrow=2)
 ```
->>>>>>> 5f18fc3af5a57b160b843c15813282c8d75c80e1
 
 ```{r}
 #frequency by month
@@ -842,14 +844,14 @@ We can look more closely at the Hour of the Day to see if types of crime vary by
 
 
 
-```{r fig.height=4.5,fig.width=4}
+```{r fig.height=8,fig.width=6}
 #how the different crime types associated with time using heatmap
 crime_df%>%
   select(ClassCode,TimeStart)%>%
   filter(!is.na(TimeStart))%>%
   mutate(ClassCode=as.factor(ClassCode))%>%
   mutate(Hour=as.factor(substr(TimeStart,1,2)))%>%
-  group_by(ClassCode,Hour)%>%dplyr::summarise(count=n())%>%mutate(pct=count/sum(count))->byKYbyFRTM
+  group_by(ClassCode,Hour)%>%dplyr::summarise(count=n())%>%mutate(Freq=count/sum(count))->byKYbyFRTM
 #combining hour 00 and hour 24 into hour 00
 byKYbyFRTM$Hour[byKYbyFRTM$Hour=="24"]<-"00"
 byKYbyFRTM$Hour<-factor(byKYbyFRTM$Hour)
@@ -862,16 +864,12 @@ byKYbyFRTM_match%>%group_by(Hour)%>%dplyr::summarise(mean=mean(count),na.rm=TRUE
 
 byKYbyFRTM_match%>%ggplot(aes(
   fct_relevel(as.factor(OffenseDesc),as.character(desc2_desc_cnt$OffenseDesc[sort(desc2_desc_cnt$mean,index.return=TRUE,decreasing=TRUE)$ix])),
-  Hour,fill=pct))+scale_fill_gradientn(colors=c("red","orange","yellow","green","blue","violet"),na.value="black")+
+  Hour,fill=Freq))+scale_fill_gradientn(colors=c("red","orange","yellow","green","blue","violet"),na.value="black")+
   scale_x_discrete(label=function(x) abbreviate(x, minlength=20))+coord_flip()+geom_tile(color="white",size=0.25)+
   theme(axis.text.x = element_text(size=5, hjust = 0.5),axis.text.y=element_text(size=4),legend.position="bottom",
         legend.text=element_text(size=6,hjust=0.5),legend.title=element_text(size=8),legend.key = element_rect(size = 0.5),legend.key.size = unit(1, 'lines'))+ylab("Hour")+xlab("OffenseDesc")
 ```
 
-
-
-
-*Jingbo check if you want to modify the variable names in R code above, also try changing percent from pct to percent or something, I got misled that its precinct *     
 
 A few observations from this heat map:
 
@@ -889,7 +887,7 @@ We began with temperature data from NOAA.
 
 * Temperature: Hotter vs. colder  
 
-```{r, fig.width = 10, fig.height = 8}
+```{r, fig.width = 6, fig.height = 4}
 ########################################################################################
 #Read in weather data from file
 weather_select = c("DATE", "AWND", "PRCP", "SNOW", "TMAX")
@@ -919,11 +917,43 @@ ggplot(temp_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Hot, color="Hot 
   geom_step(aes(x=Pct, y=Cold, color="Cold Days"), size=1) + 
   scale_color_manual(name = "Temperature", values = cols) + 
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
-  labs(x= "Precinct", y = "Average Number of Crimes per Day")
+  labs(x= "Precinct", y = "Average Number of Crimes per Day") +
+  ggtitle("Average crimes per Day on Hot/Cold Days")
 ```
 
 This graphs shows that in nearly all precincts, the colder days have fewer crimes committed than on days with hot weather. We can also look to see if the effect is different for the level of the crime.
-  
+
+* Slope by Level  
+
+```{r  }
+### Relationship between max temp and crime volume
+# set up the data by day and Level
+daily_df <-crime_w_df %>% group_by(DateStart,Level) %>% summarize(CrimeCount=n(),MaxTemp=mean(TMAX))
+# plot it -- well, plot it later after the linear models are run so we can see the linear slopes
+library(ggplot2)
+# daily_df %>% ggplot(aes(x=MaxTemp, y=CrimeCount, color=Level)) + geom_point()
+# linear model: Felonies
+f_df <- daily_df %>% filter(Level=="FELONY")
+flm <- lm(CrimeCount~MaxTemp, f_df)
+# linear model: Misdemeanors
+m_df <- daily_df %>% filter(Level=="MISDEMEANOR")
+mlm <- lm(CrimeCount~MaxTemp, m_df)
+# linear model: Violation
+v_df <- daily_df %>% filter(Level=="VIOLATION")
+vlm <- lm(CrimeCount~MaxTemp, v_df)
+ggplot(daily_df, aes(x=MaxTemp, y=CrimeCount, color=Level)) + 
+  geom_point(alpha=0.5) +
+  geom_abline(slope=flm[["coefficients"]][["MaxTemp"]],intercept=flm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=450, label=paste0("y=",round(flm[["coefficients"]][["MaxTemp"]],2),"x+",round(flm[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=mlm[["coefficients"]][["MaxTemp"]],intercept=mlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=770, label=paste0("y=",round(mlm[["coefficients"]][["MaxTemp"]],2),"x+",round(mlm[["coefficients"]][["(Intercept)"]],0))) +
+  geom_abline(slope=vlm[["coefficients"]][["MaxTemp"]],intercept=vlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=200, label=paste0("y=",round(vlm[["coefficients"]][["MaxTemp"]],2),"x+",round(vlm[["coefficients"]][["(Intercept)"]],0))) +
+  ggtitle("Daily Crime Counts vs. Temperature by Level of Crime with Linear Models")
+```
+
+This shows us how temperature is related to crime in all three levels: the warmer it is, the more crime. The steepest slope is for Misdemeanors, meaning the greatest impact of temperature is on that level of crime, followed by Felonies.  
+
 * Precipitation
 We continue with our weather data to see if rain makes a difference in crime. It turns out that a bit of rain does seem to reduce crime a bit, as the slope-trend is negative
 
@@ -959,7 +989,7 @@ drugs_crime_df <- crime_w_df %>% filter(OffenseDesc == "DANGEROUS DRUGS")
 
 
 
-```{r, fig.width = 8, fig.height = 5}
+```{r, fig.width = 9, fig.height = 12}
 #Generate scatterplot of crime vs precipitiation
 rain_summary_per_day <- crime_w_df %>% group_by(DateStart, Level) %>% summarize(Count = n()) %>% drop_na()
 #append weather data
@@ -978,7 +1008,7 @@ v_df_rain <- rain_summary_per_day %>% filter(Level=="VIOLATION")
 vlm_rain <- lm(Count~PRCP, v_df_rain)
 
 #Plot data for all three crime levels vs precipitation with linear model results
-ggplot(rain_summary_per_day, aes(x=PRCP, y=Count, color=Level)) + 
+s1 <- ggplot(rain_summary_per_day, aes(x=PRCP, y=Count, color=Level)) + 
   geom_point(alpha=0.3) +
   geom_abline(slope=flm_rain[["coefficients"]][["PRCP"]],intercept=flm_rain[["coefficients"]][["(Intercept)"]]) +
   annotate("text", x= 3, y=420, label=paste0("y=",round(flm_rain[["coefficients"]][["PRCP"]],2),"x+",round(flm_rain[["coefficients"]][["(Intercept)"]],0))) +
@@ -998,7 +1028,7 @@ vc_df_rain <- vc_df_rain %>% left_join(weather_data, by = c("DateStart" = "DATE"
 #Generate linear model for Violent Crime vs. Precipitation
 vclm_rain <- lm(Count~PRCP, vc_df_rain)
 
-ggplot(vc_df_rain, aes(x=PRCP, y=Count)) + 
+s2 <- ggplot(vc_df_rain, aes(x=PRCP, y=Count)) + 
   geom_point(alpha=0.3) +
   geom_abline(slope=vclm_rain[["coefficients"]][["PRCP"]],intercept=vclm_rain[["coefficients"]][["(Intercept)"]]) +
   annotate("text", x= 3.5, y=240, label=paste0("y=",round(vclm_rain[["coefficients"]][["PRCP"]],2),"x+",round(vclm_rain[["coefficients"]][["(Intercept)"]],0))) +
@@ -1014,11 +1044,13 @@ dg_df_rain <- dg_df_rain %>% left_join(weather_data, by = c("DateStart" = "DATE"
 #Generate linear model for Violent Crime vs. Precipitation
 dglm_rain <- lm(Count~PRCP, dg_df_rain)
 
-ggplot(dg_df_rain, aes(x=PRCP, y=Count)) + 
+s3 <- ggplot(dg_df_rain, aes(x=PRCP, y=Count)) + 
   geom_point(alpha=0.3) +
   geom_abline(slope=dglm_rain[["coefficients"]][["PRCP"]],intercept=dglm_rain[["coefficients"]][["(Intercept)"]]) +
   annotate("text", x= 3.5, y=75, label=paste0("y=",round(dglm_rain[["coefficients"]][["PRCP"]],2),"x+",round(dglm_rain[["coefficients"]][["(Intercept)"]],0))) +
   labs(x = "Precipitation [inches]", y = "Daily Dangerous Drugs Crime Incident Count", title = "Daily Dangerous Drugs Crime Counts vs. Precipitation with Linear Models")
+
+grid.arrange(s1,s2,s3)
 ```
 
 
@@ -1030,7 +1062,7 @@ A lot of the data is on days with no rain, and you can read right off the graph 
 
 We brought in data on the phases of the moon, just to test the idea that with a full moon we might see more crime. Articles such as in Decoded Science (https://www.decodedscience.org/full-moons-crime-aka-lunar-effect-real-deal-pseudoscience/41881) examine the issue, but we thought we could examine it in our dataset.
 
-```{r, fig.width = 6, fig.height = 6}
+```{r, fig.width = 9, fig.height = 8}
 moon_summary <- crime_w_df %>% 
   filter(phase == "Full Moon" | phase == "New Moon" | phase == "First Quarter" | phase == "Last Quarter") %>% 
   group_by(DateStart, phase) %>% summarize(Count = n()) %>% drop_na()
@@ -1047,11 +1079,13 @@ blank_theme <- theme_minimal()+
     panel.border = element_blank(),
     panel.grid=element_blank(),
     axis.ticks = element_blank(),
-    plot.title=element_text(size=14, face="bold")
+    #plot.title=element_text(size=14, face="bold")
   )
 
-ggplot(data = moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+pie1 <- ggplot(data = moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
   geom_bar(width = 1, stat = "identity") +
+  scale_fill_brewer(palette="Pastel1") +
+  #scale_fill_manual(values=c("red","yellow","blue","green")) +
   coord_polar(theta = "y", start=0) +
   blank_theme +
   theme(axis.text.x=element_blank()) +
@@ -1067,8 +1101,9 @@ vc_moon_total_crime <- vc_moon_summary %>% group_by(phase) %>% summarize(Total_C
 vc_moon_phase_total_count <- sum(vc_moon_total_crime$Total_Count)
 vc_moon_total_crime <- vc_moon_total_crime %>% mutate(Pct = Total_Count/vc_moon_phase_total_count)
 
-ggplot(data = vc_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+pie2 <- ggplot(data = vc_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
   geom_bar(width = 1, stat = "identity") +
+  scale_fill_brewer(palette="Pastel1") +
   coord_polar(theta = "y", start=0) +
   blank_theme +
   theme(axis.text.x=element_blank()) +
@@ -1084,13 +1119,16 @@ dg_moon_total_crime <- dg_moon_summary %>% group_by(phase) %>% summarize(Total_C
 dg_moon_phase_total_count <- sum(dg_moon_total_crime$Total_Count)
 dg_moon_total_crime <- dg_moon_total_crime %>% mutate(Pct = Total_Count/dg_moon_phase_total_count)
 
-ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
+pie3 <- ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = phase)) +
   geom_bar(width = 1, stat = "identity") +
+  scale_fill_brewer(palette="Pastel1") +
   coord_polar(theta = "y", start=0) +
   blank_theme +
   theme(axis.text.x=element_blank()) +
   geom_text(aes(label = scales::percent(Pct)), position = position_stack(vjust = 0.5)) + 
   ggtitle("Moon Phase vs. Dangerous Drugs Crime Count Analysis")
+
+grid.arrange(pie1,pie2,pie3)
 ```
 
 We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
