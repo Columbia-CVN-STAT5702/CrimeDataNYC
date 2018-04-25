@@ -82,11 +82,11 @@ Lets study the relationship more closely via below two plots.
 require(gridExtra)
 x1 =ggplot(crime_df, aes(x=year,y=AnnAvg)) +
   geom_point( alpha=0.3)+
-ylab("Annual Unemployment")+
+ylab("Annual Unemployment")
   
 x2=  ggplot(crime_df, aes(x=year,y=CrimeCount)) +
   geom_point( alpha=0.3)+xlab("crime count over 10 years")+
-ylab(" Yearly Crime count ")+
+ylab(" Yearly Crime count ")
  
 
 
