@@ -235,15 +235,68 @@ Scatterplot with linear model lines
 ggplot(daily_df, aes(x=MaxTemp, y=CrimeCount, color=Level)) + 
   geom_point(alpha=0.5) +
   geom_abline(slope=flm[["coefficients"]][["MaxTemp"]],intercept=flm[["coefficients"]][["(Intercept)"]]) +
-  annotate("text", x= 25, y=450, label=paste0("y=",round(flm[["coefficients"]][["MaxTemp"]],2),"x+",round(flm[["coefficients"]][["(Intercept)"]]),0)) +
+  annotate("text", x= 25, y=450, label=paste0("y=",round(flm[["coefficients"]][["MaxTemp"]],2),"x+",round(flm[["coefficients"]][["(Intercept)"]],0))) +
   geom_abline(slope=mlm[["coefficients"]][["MaxTemp"]],intercept=mlm[["coefficients"]][["(Intercept)"]]) +
-  annotate("text", x= 25, y=770, label=paste0("y=",round(mlm[["coefficients"]][["MaxTemp"]],2),"x+",round(mlm[["coefficients"]][["(Intercept)"]]),0)) +
+  annotate("text", x= 25, y=770, label=paste0("y=",round(mlm[["coefficients"]][["MaxTemp"]],2),"x+",round(mlm[["coefficients"]][["(Intercept)"]],0))) +
   geom_abline(slope=vlm[["coefficients"]][["MaxTemp"]],intercept=vlm[["coefficients"]][["(Intercept)"]]) +
-  annotate("text", x= 25, y=200, label=paste0("y=",round(vlm[["coefficients"]][["MaxTemp"]],2),"x+",round(vlm[["coefficients"]][["(Intercept)"]]),0)) +
+  annotate("text", x= 25, y=200, label=paste0("y=",round(vlm[["coefficients"]][["MaxTemp"]],2),"x+",round(vlm[["coefficients"]][["(Intercept)"]],0))) +
   ggtitle("Daily Crime Counts vs. Temperature by Level of Crime with Linear Models")
 
 ```
 
 This shows us how temperature is related to crime in all three levels: the warmer it is, the more crime. The steepest slope is for Misdemeanors, meaning the greatest impact of temperature is on that level of crime, followed by Felonies. The fact that Violations does not vary as much reinforces a theory I have that Violations are a function of available police hours more than anything else.
+
+```{r}
+
+
+# include OffenseDesc and IntOffenseDesc into daily summary
+dailies_df <-crime_df %>% group_by(DateStart,Level,OffenseDesc,IntOffenseDesc) %>% summarize(CrimeCount=n(),MaxTemp=mean(TMAX))
+
+# create a table for Violent Crimes, Daily Count
+daily_violent_df <- dailies_df  %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                           OffenseDesc == "FELONY ASSAULT" | 
+                                           OffenseDesc == "MURDER & NON-NEGL. MANSLAUGHTER" |  
+                                           OffenseDesc == "RAPE" |
+                                           OffenseDesc == "ROBBERY" |
+                                           IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                           IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                           IntOffenseDesc == "ASSAULT 3" |
+                                           IntOffenseDesc == "RAPE 1" |
+                                           IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                           IntOffenseDesc == "SEXUAL ABUSE" |
+                                           IntOffenseDesc == "SEXUAL ABUSE 3,2") %>%
+                                  group_by(DateStart) %>%
+                                  summarize(CrimeCount=sum(CrimeCount),MaxTemp=mean(MaxTemp))
+
+
+# create a table for Dangerous Drug Crimes, Daily Count
+daily_drug_df <- dailies_df  %>% filter(OffenseDesc == "DANGEROUS DRUGS") %>% 
+                                  group_by(DateStart) %>% 
+                                  summarize(CrimeCount=sum(CrimeCount),MaxTemp=mean(MaxTemp))
+
+# derive linear model
+dvlm<- lm(CrimeCount~MaxTemp, daily_violent_df)
+
+# plot
+ggplot(daily_violent_df, aes(x=MaxTemp, y=CrimeCount)) + 
+  geom_point(alpha=0.5) +
+  geom_abline(slope=dvlm[["coefficients"]][["MaxTemp"]],intercept=dvlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=300, label=paste0("y=",round(dvlm[["coefficients"]][["MaxTemp"]],2),"x+",round(dvlm[["coefficients"]][["(Intercept)"]],0)))+
+  ggtitle("Daily Violent Crime Counts vs. Temperature by Level of Crime with Linear Model")+
+  scale_y_continuous(limits = c(0, 625))
+
+# derive linear model
+ddlm<- lm(CrimeCount~MaxTemp, daily_drug_df)
+# grab p-value
+ddlmp<-round(summary(ddlm)$coefficients[2,4],5) 
+
+# plot
+ggplot(daily_drug_df, aes(x=MaxTemp, y=CrimeCount)) + 
+  geom_point(alpha=0.5) +
+  geom_abline(slope=ddlm[["coefficients"]][["MaxTemp"]],intercept=ddlm[["coefficients"]][["(Intercept)"]]) +
+  annotate("text", x= 25, y=200, label=paste0("y=",round(ddlm[["coefficients"]][["MaxTemp"]],2),"x+",round(ddlm[["coefficients"]][["(Intercept)"]],0)," p-value:",ddlmp))+
+  ggtitle("Daily Dangerous Drug Crime Counts vs. Temperature by Level of Crime with Linear Model") +
+  scale_y_continuous(limits = c(0, 625))
+```
 
 
