@@ -55,6 +55,22 @@ crime_df$DateReport <- as.Date(crime_df$DateReport, format='%m/%d/%Y')
 crime_df$TimeStart <- as.POSIXct(crime_df$TimeStart, format='%H:%M:%S')
 crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
 
+#Generate violent crime dataframe
+#filter for violent crime
+violent_crime_df <- crime_df %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
+                                          OffenseDesc == "FELONY ASSAULT" | 
+                                          OffenseDesc == "MURDER & NON-NEGL. MANSLAUGHTER" |  
+                                          OffenseDesc == "RAPE" |
+                                          OffenseDesc == "ROBBERY" |
+                                          IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
+                                          IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
+                                          IntOffenseDesc == "ASSAULT 3" |
+                                          IntOffenseDesc == "RAPE 1" |
+                                          IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
+                                          IntOffenseDesc == "SEXUAL ABUSE" |
+                                          IntOffenseDesc == "SEXUAL ABUSE 3,2")
+#Generate dangerous drugs dataframe
+drugs_crime_df <- crime_df %>% filter(OffenseDesc == "DANGEROUS DRUGS")
 
 ```
 ## Plots  
@@ -109,7 +125,33 @@ crime_df$TimeEnd   <- as.POSIXct(crime_df$TimeEnd, format='%H:%M:%S')
     scale_x_discrete(breaks=crime_place_2$PremLevel,labels=crime_place_2$PremDesc) +
     ggtitle(" Place of Crime Distribution Across Crime Categories")
   
-    
+violent_crime_place <- violent_crime_df %>%
+  filter(!is.na(PremDesc),Level !="") %>%
+  group_by(PremDesc) %>%
+  summarize(count=n()) %>%
+  top_n(n=10, wt=count) %>%
+  mutate(rel_freq = count/sum(count))
+
+ggplot(violent_crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  ylab("Crime Count Frequency") +
+  xlab("Place of Crime - Premises") +
+  ggtitle(" Top Ten Violent Crime Premises")
+
+drugs_crime_place <- drugs_crime_df %>%
+  filter(!is.na(PremDesc),Level !="") %>%
+  group_by(PremDesc) %>%
+  summarize(count=n()) %>%
+  top_n(n=10, wt=count) %>%
+  mutate(rel_freq = count/sum(count))
+
+ggplot(drugs_crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  ylab("Crime Count Frequency") +
+  xlab("Place of Crime - Premises") +
+  ggtitle(" Top Ten Dangerous Drugs Crime Premises")    
 
 ```
 
@@ -145,21 +187,47 @@ The following plots make an attempt to find out the answers for the following qu
 
 ## To find Top 15 Crime Categories
 ```{r fig.height=4, fig_width = 6}
-  crime_top <- crime_df %>% 
-                  filter(OffenseDesc!="") %>%
-                  group_by(OffenseDesc) %>%
-                  summarize(count=n()) %>%
-                  mutate(rel_freq = count/sum(count)) %>%
-                  top_n(n=15, wt=count)
+crime_top_felony <- crime_df %>% 
+  filter(OffenseDesc!="" & Level=="FELONY") %>%
+  group_by(OffenseDesc) %>%
+  summarize(count=n()) %>%
+  mutate(rel_freq = count/sum(count)) %>%
+  top_n(n=15, wt=count)
 
-  ggplot(crime_top, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
-    geom_col() + 
-    coord_flip() +
-    xlab("Offense Category") +
-    ylab("Crime Count Frequency") +
-    ggtitle(" Top Crime Offense Categories")
-  
+ggplot(crime_top_felony, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+  geom_col() + 
+  coord_flip() +
+  xlab("Offense Category") +
+  ylab("Crime Count Frequency") +
+  ggtitle(" Top Felony Crime Offense Categories")
 
+crime_top_misd <- crime_df %>% 
+  filter(OffenseDesc!="" & Level=="MISDEMEANOR") %>%
+  group_by(OffenseDesc) %>%
+  summarize(count=n()) %>%
+  mutate(rel_freq = count/sum(count)) %>%
+  top_n(n=15, wt=count)
+
+ggplot(crime_top_misd, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+  geom_col() + 
+  coord_flip() +
+  xlab("Offense Category") +
+  ylab("Crime Count Frequency") +
+  ggtitle(" Top Misdemeanor Crime Offense Categories")
+
+crime_top_violation <- crime_df %>% 
+  filter(OffenseDesc!="" & Level=="VIOLATION") %>%
+  group_by(OffenseDesc) %>%
+  summarize(count=n()) %>%
+  mutate(rel_freq = count/sum(count)) %>%
+  top_n(n=15, wt=count)
+
+ggplot(crime_top_violation, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+  geom_col() + 
+  coord_flip() +
+  xlab("Offense Category") +
+  ylab("Crime Count Frequency") +
+  ggtitle(" Top Violation Crime Offense Categories")
 ```
 
 The above plot summarizes the top offense categories in NYC. Petit Larceny, Harrasment , Assualt, Criminal Mischief, Grand Larceny and  Dangerous Drugs figure among the top offense categories.  
