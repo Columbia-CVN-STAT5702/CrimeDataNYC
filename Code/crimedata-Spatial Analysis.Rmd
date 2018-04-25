@@ -63,7 +63,7 @@ colors <- c(
  "forestgreen"
  )
 groups = as.character(unique(crime_df$Level))
-Year =as.character(unique(crime_df$crime_year))
+#Year =as.character(unique(crime_df$crime_year))
 
 groupColors = colorFactor(palette = colors, domain = crime_df$Level)
 
@@ -76,7 +76,7 @@ for(g in groups){
                                  group = g)
 
 }
-map %>% addLayersControl(baseGroups = Year ,  overlayGroups = groups  ,position = "topleft" )%>%
+map %>% addLayersControl(baseGroups =groups  ,position = "topleft" )%>%
     
   setView(-74.00, 40.71, zoom = 12)
 ```
