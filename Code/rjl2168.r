@@ -43,6 +43,9 @@ full_moon_data <- moon_data %>% filter(phase == "Full Moon")
 #Merge the moon phase data into the main data frame
 crime_df <- crime_df %>% left_join(moon_data, by = c("DateStart" = "date"))
 
+#Remove any observations with dates out of the expected range
+crime_df <- crime_df %>% filter(year(DateStart) > 2005)
+
 #Generate violent crime dataframe
 #filter for violent crime
 violent_crime_df <- crime_df %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
