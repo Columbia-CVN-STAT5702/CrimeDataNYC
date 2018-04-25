@@ -106,7 +106,7 @@ server <- function(input, output) {
   output$MapTypeSelect <- renderUI({
     selectInput(inputId = "maptype",
                 label = "Select Display Geographic Map",
-                choices = c("Point "="point", "Heat Map"="heatmap", "Density"="density","Precincts" ="precincts"),
+                choices = c("Point "="point","Density"="density","Precincts (NYC ALL Boroughs)" ="precincts"),
                 selected = "Point")})
   
   
@@ -230,9 +230,9 @@ server <- function(input, output) {
     if(input$maptype =="heatmap")
     {
       
-      points_Lat_Long <- cbind(crime_map$Long, crime_map$Lat)
-      map = leaflet(crime_map) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")%>% 
-        addWebGLHeatmap(lng=~Long, lat=~Lat,size=20,units='px') 
+      #points_Lat_Long <- cbind(crime_map$Long, crime_map$Lat)
+      #map = leaflet(crime_map) %>% addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")%>% 
+       # addWebGLHeatmap(lng=~Long, lat=~Lat,size=20,units='px') 
     }
     
     else 
