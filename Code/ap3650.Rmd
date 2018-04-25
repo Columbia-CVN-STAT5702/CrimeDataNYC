@@ -444,19 +444,33 @@ The NewYork City Crime Report Data has one of it is variables as "Parks" which p
 
 ## Attempted Crime Trend 
 ```{r fig.height=6 , fig.width=6}
+  #crime_stat <- crime_df %>%
+  #                filter(AtptCptdStatus=="ATTEMPTED" & year(DateStart)>2005 & Level != "") %>%
+  #                group_by(Date=floor_date(DateStart,"year"),Level) %>%
+  #                summarize(count=n()) %>% 
+  #                ungroup() %>%
+  #                group_by(Level) %>%
+  #                mutate(rel_count = count*100/count[1])
+
   crime_stat <- crime_df %>%
-                  filter(AtptCptdStatus=="ATTEMPTED" & year(DateStart)>2005 & Level != "") %>%
+                  filter(year(DateStart)>2005 & Level != "") %>%
                   group_by(Date=floor_date(DateStart,"year"),Level) %>%
                   summarize(count=n()) %>% 
                   ungroup() %>%
                   group_by(Level) %>%
                   mutate(rel_count = count*100/count[1])
 
+  #ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
+  #  geom_line() +
+  #  ggtitle("Trend of Attempted Offense  over the years") +
+  #  xlab("Attempted Crime Rate") +
+  #  ylab("Time ( Years)")
+  
   ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
     geom_line() +
-    ggtitle("Trend of Attempted Offense  over the years") +
-    xlab("Attempted Crime Rate") +
-    ylab("Time ( Years)")
+    ggtitle("Trend of Crime Categories over the years") +
+    ylab("Crime Rate") +
+    xlab("Time ( Years)")
 
 ```
 
