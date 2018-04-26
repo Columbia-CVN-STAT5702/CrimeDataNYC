@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Q1 Part B</title>
+    <style>
+
+body {
+  font: 10px sans-serif;
+}
+
+rect {
+  stroke: #000;
+}
+
+svg {
+  shape-rendering: crispEdges;
+}
+
+</style>
+    <script src="https://d3js.org/d3.v4.min.js">  </script>
+
+  </head>
+  <body>
+
+    <h2> Please choose the year below to view the mosaic distribution of crime population density</h2>
+
+    <input  id="2010" type="radio" name="stack" value="north">2010 <br>
+    <input  id="2016"  type="radio" name="stack" value="east" >2016 <br>
+    
+  <em> hober over the blocks to view the details </em>
+<!-- 
+  <em> hober over the blocks to view the details </em>
+ <h2 id="2010">2010</h2> <div id="2016">2016</div> -->
+
+    <script type="text/javascript">
+
+
+var width = 850,
+    height = 550,
+    margin = 70;
+ 
+var x = d3.scaleLinear()
+    .range([0, width - 3 * margin]);
+
+var y = d3.scaleLinear()
+     .range([0, height - 2 * margin]);
+
+// var y = d3.scaleBand()
+//       .domain(["FELONY","MISDEMEANOR","VIOLATION")
+//     .range([0, height - 2 * margin]);
+
+var z = d3.scaleOrdinal(d3.schemeCategory10);
+
+console.log(z);
+
+var n = d3.format(",d"),
+    p = d3.format("%");
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + 2 * margin + "," + margin + ")");
+
+    //var pathlnk= "mosaicdata.json";
+   var pathlnk="2010.json"
+  
+
+    d3.select("[id='2016']").on("click", function () {
+
+    pathlnk="2016.json";
+    //alert("6");
+
+
+d3.json(pathlnk, function(error, data) {
+  if (error) throw error;
+
+  var offset = 0;
+
+  d3.select("svg").remove(); 
+var svg = d3.select("body").append("svg").attr("width","960").attr("height", "600"),
+inner = svg.append("g").attr("transform", "translate(" + 2 * margin + "," + margin + ")");
+
+  // Nest values by Level. We assume each Level+Boro is unique.
+  var Levels = d3.nest()
+      .key(function(d) { return d.Level; })
+      .entries(data);
+
+  // Compute the total sum, the per-Level sum, and the per-Boro offset.
+  // You can use reduce rather than reduceRight to reverse the ordering.
+  // We also record a reference to the parent Level for each Boro.
+  var sum = Levels.reduce(function(v, p) {
+    return (p.offset = v) + (p.sum = p.values.reduceRight(function(v, d) {
+      d.parent = p;
+      return (d.offset = v) + d.value;
+    }, 0));
+  }, 0);
+
+  // Add x-axis ticks.
+  var xtick = svg.selectAll(".x")
+      //.data(x.ticks(10))
+    .enter().append("g")
+      .attr("class", "x")
+      .attr("transform", function(d) { return "translate(" + x(d) + "," + y(1) + ")"; });
+
+  xtick.append("line")
+      .attr("y2", 6)
+      .style("stroke", "#000");
+
+  xtick.append("text")
+      .attr("y", 8)
+      .attr("text-anchor", "middle")
+      .attr("dy", ".71em")
+      .text(p);
+
+  // Add y-axis ticks.
+  var ytick = svg.selectAll(".y")
+      //.data(y.ticks(10))
+    .enter().append("g")
+      .attr("class", "y")
+      .attr("transform", function(d) { return "translate(0," + y(1 - d) + ")"; });
+
+  ytick.append("line")
+      .attr("x1", -6)
+      .style("stroke", "#000");
+
+  ytick.append("text")
+      .attr("x", -8)
+      .attr("text-anchor", "end")
+      .attr("dy", ".35em")
+      .text(p);
+
+  // Add a group for each Level.
+  var Levels = svg.selectAll(".Level")
+      .data(Levels)
+    .enter().append("g")
+      .attr("class", "Level")
+      .attr("xlink:title", function(d) { return d.key; })
+      .attr("transform", function(d) { return "translate(" + x(d.offset / sum) + ")"; });
+
+  // Add a rect for each Boro.
+  var Boros = Levels.selectAll(".Boro")
+      .data(function(d) { return d.values; })
+    .enter().append("a")
+      .attr("class", "Boro")
+      .attr("xlink:title", function(d) { return d.Boro + " " + d.parent.key + ": " + n(d.value*100)+"%"; })
+    .append("rect")
+      .attr("y", function(d) { return y(d.offset / d.parent.sum); })
+      .attr("height", function(d) { return y(d.value / d.parent.sum); })
+      .attr("width", function(d) { return x(d.parent.sum / sum); })
+      .style("fill", function(d) { return z(d.Boro); });
+
+       //Boros.exit().remove();
+});
+
+    });
+
+     d3.select("[id='2010']").on("click", function () {
+
+    pathlnk="2010.json";
+    alert(0);
+
+
+d3.json(pathlnk, function(error, data) {
+  if (error) throw error;
+
+  var offset = 0;
+
+d3.select("svg").remove(); 
+var svg = d3.select("body").append("svg").attr("width","960").attr("height", "600"),
+inner = svg.append("g");
+
+  // Nest values by Level. We assume each Level+Boro is unique.
+  var Levels = d3.nest()
+      .key(function(d) { return d.Level; })
+      .entries(data);
+
+  // Compute the total sum, the per-Level sum, and the per-Boro offset.
+  // You can use reduce rather than reduceRight to reverse the ordering.
+  // We also record a reference to the parent Level for each Boro.
+  var sum = Levels.reduce(function(v, p) {
+    return (p.offset = v) + (p.sum = p.values.reduceRight(function(v, d) {
+      d.parent = p;
+      return (d.offset = v) + d.value;
+    }, 0));
+  }, 0);
+
+  // Add x-axis ticks.
+  var xtick = svg.selectAll(".x")
+      //.data(x.ticks(10))
+    .enter().append("g")
+      .attr("class", "x")
+      .attr("transform", function(d) { return "translate(" + x(d) + "," + y(1) + ")"; });
+
+  xtick.append("line")
+      .attr("y2", 6)
+      .style("stroke", "#000");
+
+  xtick.append("text")
+      .attr("y", 8)
+      .attr("text-anchor", "middle")
+      .attr("dy", ".71em")
+      .text(p);
+
+  // Add y-axis ticks.
+  var ytick = svg.selectAll(".y")
+     // .data(y.ticks(10))
+    .enter().append("g")
+      .attr("class", "y")
+      .attr("transform", function(d) { return "translate(0," + y(1 - d) + ")"; });
+
+  ytick.append("line")
+      .attr("x1", -6)
+      .style("stroke", "#000");
+
+  ytick.append("text")
+      .attr("x", -8)
+      .attr("text-anchor", "end")
+      .attr("dy", ".35em")
+      .text(p);
+
+  // Add a group for each Level.
+  var Levels = svg.selectAll(".Level")
+      .data(Levels)
+    .enter().append("g")
+      .attr("class", "Level")
+      .attr("xlink:title", function(d) { return d.key; })
+      .attr("transform", function(d) { return "translate(" + x(d.offset / sum) + ")"; });
+
+  // Add a rect for each Boro.
+  var Boros = Levels.selectAll(".Boro")
+      .data(function(d) { return d.values; })
+    .enter().append("a")
+      .attr("class", "Boro")
+      .attr("xlink:title", function(d) { return d.Boro + " " + d.parent.key + ": " + n(d.value*100)+"%"; })
+    .append("rect")
+      .attr("y", function(d) { return y(d.offset / d.parent.sum); })
+      .attr("height", function(d) { return y(d.value / d.parent.sum); })
+      .attr("width", function(d) { return x(d.parent.sum / sum); })
+      .style("fill", function(d) { return z(d.Boro); });
+
+      //Boros.exit.remove();
+});
+
+    });
+
+
+
+</script>
+
+
+
+
+    </script>
+  </body>
+</html>

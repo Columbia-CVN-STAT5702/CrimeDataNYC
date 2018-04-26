@@ -1,0 +1,77 @@
+[
+  {
+    "Boro": "BRONX",
+    "Level": "FELONY",
+    "value": 0.0202540162933143
+  },
+  {
+    "Boro": "BRONX",
+    "Level": "MISDEMEANOR",
+    "value": 0.0517627506302758
+  },
+  {
+    "Boro": "BRONX",
+    "Level": "VIOLATION",
+    "value": 0.00898774680385934
+  },
+  {
+    "Boro": "BROOKLYN",
+    "Level": "FELONY",
+    "value": 0.0184796582425041
+  },
+  {
+    "Boro": "BROOKLYN",
+    "Level": "MISDEMEANOR",
+    "value": 0.035393061045235
+  },
+  {
+    "Boro": "BROOKLYN",
+    "Level": "VIOLATION",
+    "value": 0.00696610372499701
+  },
+  {
+    "Boro": "MANHATTAN",
+    "Level": "FELONY",
+    "value": 0.022936262865942
+  },
+  {
+    "Boro": "MANHATTAN",
+    "Level": "MISDEMEANOR",
+    "value": 0.0461997902732438
+  },
+  {
+    "Boro": "MANHATTAN",
+    "Level": "VIOLATION",
+    "value": 0.00760086085077431
+  },
+  {
+    "Boro": "QUEENS",
+    "Level": "FELONY",
+    "value": 0.0143868218451246
+  },
+  {
+    "Boro": "QUEENS",
+    "Level": "MISDEMEANOR",
+    "value": 0.0247547654974488
+  },
+  {
+    "Boro": "QUEENS",
+    "Level": "VIOLATION",
+    "value": 0.00544621875787301
+  },
+  {
+    "Boro": "STATEN ISLAND",
+    "Level": "FELONY",
+    "value": 0.01019776843812
+  },
+  {
+    "Boro": "STATEN ISLAND",
+    "Level": "MISDEMEANOR",
+    "value": 0.0316194824312504
+  },
+  {
+    "Boro": "STATEN ISLAND",
+    "Level": "VIOLATION",
+    "value": 0.00962387728543085
+  }
+]
