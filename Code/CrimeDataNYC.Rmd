@@ -1156,7 +1156,7 @@ pie3 <- ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = pha
 grid.arrange(pie1,pie2,pie3)
 ```
 
-*Graph note: We debated (hotly) about using Pie Charts for this data. On the one hand, a bar chart would be at least equally capable of demonstrating the lack of difference the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and were were inspired by the shape of the moon!*
+<span style="color:grey>*Graph note: We debated (hotly) about using Pie Charts for this data. On the one hand, a bar chart would be at least equally capable of demonstrating the lack of difference, the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and we were inspired by the shape of the moon!*</span>
 
 We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
 
@@ -1293,6 +1293,13 @@ names(viorow) <-sumtabnames
 names(vcrow) <-sumtabnames
 names(ddrow) <-sumtabnames
 sumtab <-rbind(sumtab,felrow,misrow,viorow,vcrow,ddrow)
+#sumtab <-rbind(sumtab,felrow,misrow,viorow)
+newrow <- rbind(vcrow,ddrow)
+#newrow <- newrow[2:3,]
+#vctab_df <- data.frame(vcrow)
+#ddtab_df <- data.frame(ddrow)
+
+
 
 
 ```
@@ -1300,7 +1307,7 @@ sumtab <-rbind(sumtab,felrow,misrow,viorow,vcrow,ddrow)
 
 ### <span style="color:darkblue">Executive Summary </b></span>
 
-#### Introduction:  
+#### **Introduction:**  
 
 Crime has long been a story in New York City. Many of us have witnessed significant changes in both the frequency of crime and the most prevalent types of crime that have dominated New York City in the last 30 years. And crime, in general, is a major topic for any major city.
 
@@ -1317,8 +1324,12 @@ Our main findings:
 
 
 ```{r echo=FALSE}
-kable(sumtab) %>%
-    row_spec(4:5, italic = T, background = "#DCD0C0")
+kable(sumtab,"html") %>%
+    kable_styling( full_width = F) %>%
+    row_spec(4:5, italic = T, background = "#DCD0C0") %>%
+    footnote( general = " ",
+              symbol = c("Above Table is auto-generated from the Crime Dataset directly")
+           )
 ```
 
 
@@ -1435,7 +1446,7 @@ Under the “Summary” Tab, the user will have the option to generate summary s
 
 ####**Limitations:**  
 
-* **Time**: there are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
+* **Time**: There are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
 * **Brevity**: We could have had twice as many graphs, as this data was pretty rich and nuanced, and our explorations took multiple directions and multiple techniques for visualizing the data  
 * **Technical issues**:
     + Size of the dataset made it difficult to run in a free ShinyApp    
@@ -1457,8 +1468,10 @@ Under the “Summary” Tab, the user will have the option to generate summary s
 
 ####**Debates:**  
 
-* We debated whether we should use a pie charts or not  
-* We debated if we should change the column names of the dataset 
+* We debated whether we should use a pie chart or not  
+* We debated if we should change the column names of the dataset   
+* We debated to remove our detailed Detailed Data Quality Analysis   
+
 
 
 
