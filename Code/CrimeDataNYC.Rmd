@@ -42,10 +42,13 @@ library(lubridate)
 library(RColorBrewer)
 library(knitr)
 library(ggthemes)
+
+library(kableExtra)
+
 ```
 
 
-### <span style="color:darkblue">Introduction</span>
+### <span style="color:darkblue">Introduction</b></span>
 
 Crime has long been a story in New York City. Many of us have witnessed significant changes in both the frequency of crime and the most prevalent types of crime that have dominated New York City in the last 30 years.
 
@@ -65,20 +68,20 @@ Our analysis will focus on exploration of these themes, the **What**, **Where**,
 
 Additionally, as we began to explore this data, we started to wonder about specific topics within the types of crime:  
 
-* Violent Crime: Quality of life in a city is often dictated by the lack of fear of violent crime  
-* Dangerous Drugs: Addiction problems are more prominent now and legalization of marijuana remains a hot topic
+* **Violent Crime**: Quality of life in a city is often dictated by the lack of fear of violent crime  
+* **Dangerous Drugs**: Addiction problems are more prominent now and legalization of marijuana remains a hot topic
 
 
-Team Members and main roles:  
+**Team Members and main roles:**  
 
-* Brent Daniel: Borough Crime Analysis, Crime vs. Temperature, Writing/Editing, Project Leadership
+* Brent Daniel: Borough Crime Analysis, Crime vs. Temperature, Report Organization, Writing/Editing, Project Leadership
 * Rich Lavery: Merging Meteorological and Lunar Cycle Data Looking for Relationships with Crime.  Interactive Web Application Development.  
 * Anita  Pinto: Offense Categories Broad and Internal Desc with Borough Distribution, Premises/Location Analysis for Different Crime Categories, Crimes in Parks and Categories, Time Trend of Crime Categories and Attempted Crime Analysisi, Final RMD Collaboration 
 * Rashmi Rajaguru:  Interactive Web Application development and D3 plot ,Project Data and deployment summary and challenges , Spatial Data analysis , Word Cloud based crime description (Interactive ) 
 * Jingbo Wu:  Data description; Data Quality Analysis; Partial Main Analysis including time series, frequency analysis on different time scale (annual cycle, monthly cycle, weekly cycle, daily cycle); heatmaps; frequency by Precincts   
 
 
-### <span style="color:darkblue">Description of Data</span>
+### <span style="color:darkblue">Description of Data</b></span>
 
 #### Main Data Set
 
@@ -101,6 +104,8 @@ We used the following commands to import and arrange the data for analysis:
 ```{r results ="hide"}
 var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
                "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
+
+
 
 crime_df <- fread("NYPD_Complaint_Data_Historic.csv",na.strings="", col.names = var_names, stringsAsFactors = TRUE)
 
@@ -135,19 +140,19 @@ https://www.ncdc.noaa.gov/
 
 We found no significant issues in data quality that would inhibit analysis, with the possible exception of geo-location pertaining to certain types of crimes.
 
-The dataset has 24 variables and approximately 5.6 million rows, each listing a single complaint or event. The Report Date (the case reporting time) ranges from 2006-01-01 to 2016-12-31. In this section, we will investigate the patterns of missing data as well as potential errors in the data in order to determine how well we can trust the data we are using.
+Each row of the data set lists a single complaint or event. The Report Date (the case reporting time) ranges from 2006-01-01 to 2016-12-31. In this section, we will investigate the patterns of missing data as well as potential errors in the data in order to determine how well we can trust the data we are using.
 
 
 #### Missing variables Pattern using Visna
 
-A summary graphic of missing patterns is shown below  
+A summary graphic of missing patterns is shown below:  
 
 
 ```{r fig.height=6}
 visna(crime_df,sort="b")
 ``` 
 
-From the above Visna Plot, our observations about the missing patterns are as below :  
+From the above Visna Plot, our observations about the missing patterns are:  
 
 * Five of the 24 variables have no data quality concerns:
     1. Complaint Number  
@@ -162,38 +167,7 @@ From the above Visna Plot, our observations about the missing patterns are as be
 
 #### Missing Start-Date of Crime Reported
 
-```{r}
-#get the reporting dates of cases with starting dates missing and histogram over DateReport
-crime_df%>%select(DateStart,DateReport)%>%filter(is.na(DateStart))%>%select(DateReport)->tmp1
-ggplot(tmp1,aes(DateReport))+ geom_histogram(bins=120)->p1
-
-#compare pattern of crime Level between all cases vs. cases with missing DateStart
-crime_df%>%select(DateStart,Level)%>%filter(is.na(DateStart))%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp3; nr1=nrow(tmp3)
-tmp3%>%mutate(type=replicate(nr1,"DateStart_NA"))->tmp3
-crime_df%>%select(Level)%>%group_by(Level)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp5; nr2=nrow(tmp5)
-tmp5%>%mutate(type=replicate(nr2,"All"))->tmp5
-rbind(tmp3,tmp5)->tmp3tmp5
-tmp3tmp5%>%ggplot(aes(Level,RelFreq))+geom_bar(stat="identity")+scale_x_discrete(label=abbreviate)+
-  coord_flip()+xlab("Level of Offense")+ylab("Relative Frequency")+facet_wrap(~type)->p2
-
-#compare pattern of ClassCode between all cases vs. cases with missing DateStart
-crime_df%>%select(DateStart,ClassCode)%>%filter(is.na(DateStart))%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by(ClassCode)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp2; nrr1=nrow(tmp2)
-tmp2%>%mutate(type=replicate(nrr1,"DateStart_NA"))->tmp2
-crime_df%>%select(ClassCode)%>%mutate(ClassCode=as.factor(ClassCode))%>%group_by(ClassCode)%>%dplyr::summarise(count=n())%>%mutate(RelFreq = count/sum(count))->tmp4; nrr2=nrow(tmp4)
-tmp4%>%mutate(type=replicate(nrr2,"All"))->tmp4
-rbind(tmp2,tmp4)->tmp2tmp4
-tmp2tmp4%>%ggplot(aes(ClassCode,RelFreq),na.rm=FALSE)+geom_bar(stat="identity")+theme(text = element_text(size=5))+
-  coord_flip()+xlab("Offense Classification Code")+ylab("Relative Frequency")+facet_wrap(~type)->p3
-
-grid.arrange(p1,p2,p3,nrow=1)
-```
-
-
 There are total of 655 complaints missing the crime Start Date. The missing data is distributed the same as non-missing data, so we are not concerned about this random-appearing missing data.  
-
-* When looking at the Date of the Report against the volume of missing Start Dates, we notice that the are far more missing Start Dates in the earlier time periods with the volume of missing leveling out after 2010.  
-* The frequency of missing Start Date by Level of Crime looks the same as the non-missing Start Date data.  
-* The frequency distribution of the Offense Code shares the same pattern as the non-missing Start Date data.  
 
 
 #### Errors in Start-Date of Crime Reported
@@ -255,22 +229,9 @@ We do not rely on the description of premises much in our analyses, but readers 
 
 #### Mismatch between Precinct *(Pct)* and Borough *(Boro)*
 
-```{r}
-crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summarise(count=n())->tmp1
-uniPct<-unique(tmp1$Pct)
-for (i in  1:length(uniPct)) {
-  if(nrow(tmp1%>%filter(Pct==(uniPct)[i])) > 1){
-    print(tmp1%>%filter(Pct==(uniPct)[i]))
-  }
-}
-```
+There are a very small number of cases where Precinct or Borough are missing (0.007% and 0.008% of all cases, respectively). There is an even smaller number of cases where the Precinct shows an incorrect Borough. These mismatches will not be relevant to our analyses.
 
 
-There are a very small number of cases where Precinct or Borough are missing (0.007% and 0.008% of all cases, respectively). There is an even smaller number of cases where the Precinct shows an incorrect Borough.
-
-* There are total of 77 distinct police precincts in NYC. A list above shows cases where a Borough is listed for a Precinct that is inconsistent with the vast majority of cases.
-* There are about 16 cases where the Precinct shown is not consistent with the Borough in this manner. For those Precincts with such inconsistencies, the number of cases with a inconsistent Borough name range from 1 to 3 cases. This problem can be fixed by correcting the Borough names of those rare cases using a map of Pct vs Boro established from dataset.
-* 390 cases have a missing Pct. 463 cases have a missing Boro. 
 
 #### Missing Description of Offense *(OffenseDesc)*
 
@@ -278,12 +239,6 @@ There are a very small number of cases where Precinct or Borough are missing (0.
 #match_pct_boro can be used to fix the problem of double/triple borough names of specific Pct
 crime_df %>% select(Pct,Boro)%>%group_by(Pct,Boro)%>%drop_na()%>%dplyr::summarise(count=n())%>%
   group_by(Pct)%>%dplyr::summarise(Boro=Boro[count==max(count)])->match_pct_boro
-
-#It takes time to merge onto crime_df to have Pct and Boro have 1-to-1 correspondense (so I commented out). 
-#Another way is to perform merge after you have manipulted your data into a small array, i.e. only merge when needed; so you can
-#replace "crime_df%>%select(-Boro)" in the line below with whatever datatable you have to match Pct with Boro, 
-#and replace "crime_df" with any new datatable you want to create
-#merge(crime_df%>%select(-Boro),match_pct_boro, by.x="Pct",by.y = "Pct",all.x=TRUE)->crime_df
 ```
 
 
@@ -306,14 +261,10 @@ par(mgp=c(1,0.3,0),mai=c(0.4,1.8,0.01,0.01))
 data2<-match_bycount[order(match_bycount[,"count"]),]
 barplot(data2[,"count"],names.arg=abbreviate(data2[,"OffenseDesc"],minlength=20),cex.names = 0.6,cex.axis=0.7,cex.lab=0.8,horiz=TRUE,xlim=c(0,17500),las=1,xlab="Count")
 
-#Again, merging is commented out, perform it when needed
-#merge(crime_df%>%select(-OffenseDesc),match_code_desc, by.x="ClassCode",by.y = "ClassCode",all.x=TRUE)->crime_df
 ```
 
 Since the description of the offense can be inferred from the classification code, we should not be concerned about the missing values in this variable. 
 
-* *OffenseDesc* (with missing values) is the description of offense corresponding with key code ClassCode (which is complete in the dataset). Code and description map to each other and a valid *OffenseDesc* can be inferred from a map established from the dataset.
-The plot above shows missing counts of the ClassCode categories with *OffenseDesc* originally missing but now retrieved from the map between *ClassCode* and *OffenseDesc*.
 * *OffenseDesc* (with missing values) is the description of offense corresponding with key code *ClassCode* which is complete in the dataset. Code and description map each other and valid *OffenseDesc* can be infered from a map established from the dataset.  
 * The plot above shows missing counts of the *ClassCode* categories with *OffenseDesc* originally missing but now retrieved from the map between *ClassCode* and *OffenseDesc*.
 
@@ -322,6 +273,7 @@ The plot above shows missing counts of the ClassCode categories with *OffenseDes
 Missing Geo-location data will have an impact on our spatial analyses, but most of the impact is that it will not bear intelligence about the location of certain types of crime.
 
 There are five geo-location variables, and they all have the same missing pattern:  
+
 * When one is missing, all five are. We only need look at one of the variables to understand what is missing.
 * The data document tells us that “to protect victim identities, rape and sex crime offenses are not geocoded”.
 
@@ -347,15 +299,20 @@ ggtitle("Cases Missing Location")
   
 As shown above, identity protection covers all Sex Crimes and Rape. The next few categories may have reasons for missing the location by policy (certain cases of negligent homicide), or just by difficulty in identifying the location. Since the type of crime seems to be related to missing location data, we can conclude these are “missing not at random" and should bear that in mind that particular crimes will not appear on any map or geographic analysis.
 
-### <span style="color:darkblue">Main Analysis </span>
+
+
+
+
+
+### <span style="color:darkblue">Main Analysis </b></span>
 
 Crime in New York is a rich and varied topic, a topic which allowed us to explore many angles and use many techniques. Below, you will find graphs, and the insights derived from them, organized around the concepts of **What**, **Where**, **When** and **Why**.  
 
-**What: What kinds of crimes have been happening?**   
+####**What: What kinds of crimes have been happening?**   
  
-<span style="color:darkblue"> Breakdown of crime by Level (Misdemeanors, Felonies, then Violations)  </span>
+<span style="color:darkblue"> <b>Breakdown of crime by Level (Misdemeanors, Felonies, then Violations)  </b></span>
 
-First, we will examine the broadest categorization of crime: the legal level of the offense. In the raw dataset, this field is called “LAW_CAT_CD”, and we have shortened that the **Level**.
+First, we will examine the broadest categorization of crime: the legal level of the offense. In the raw dataset, this field is called “LAW_CAT_CD”, and we have shortened that to **Level**.
 
 ```{r}
 # Remove Invalid Dates 
@@ -377,9 +334,9 @@ ggplot(crime_level, aes(reorder(Level, freq), freq)) +
 ```
 
 
-What we see in this graph is how much of crime is accounted for by Misdemeanors (around 58%), followed by Felonies (around 30%), and then Violations(12%).  
+What we see in this graph is how much of crime is accounted for by Misdemeanors (around 58%), followed by Felonies (around 30%), and then Violations (12%).  
 
-<span style="color:darkblue"> Normal distribution of daily crime level of those levels  </span>
+<span style="color:darkblue"> <b>Normal distribution of daily crime level of those levels  </b></span>
 
 
 ```{r}
@@ -395,7 +352,8 @@ ggplot(daily_df, aes(x=CrimeCount)) +
 
 Another view of the Level of crimes is on a daily basis. We can see how the more numerous the Level of crime is, the more variation there is on a daily basis. All three Levels seem normally distributed, although the Misdemeanor Level has a bit of a plateau at the top, and there is a very, very long tail to the Violation data, suggesting a small number of days with record violations (January 1, 2010, 1,473 violations were recorded. We will discuss the January 1 phenomenon below).
 
-* Leading types of crimes  
+<span style="color:darkblue">Leading types of crimes  </b></span>
+
 Now let’s look a layer deeper. The dataset includes codes and descriptions that give us another level of granularity in the type of offense reported. The OffenseDesc (OFNS_DESC) tells us more.
 
 ```{r fig.height=4, fig_width = 6}
@@ -420,7 +378,7 @@ We can see from this graph that Petit Larceny accounts for the largest number of
 
 In examining this list, we had two things jump out at us:
 Assault, third on the list, and over 10% of all crime, seems pretty serious. We decided to take a closer look at all violent crimes because of this (and the fact that when you are concerned about crime, violent crime is the most frightening kind).
-Dangerous Drugs, sixth on this list, is another category of note, particularly with the way trends in drug abuse reach the news with alacrity, and a number of states of legalized use of Marijuana.
+Dangerous Drugs, sixth on this list, is another category of note, particularly with the way trends in drug abuse reach the news with alacrity, and a number of states have legalized use of Marijuana in recent years.
 
 As such, we intend to examine those categories of crime in addition to trends by Level.
 
@@ -469,9 +427,10 @@ v <- ggplot(crime_top_violation, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
 
   grid.arrange(f,m,v )
 ```  
+
 Felonies start with Grand Larceny, Robbery, Felony Assault and Burglary, with Grand Larceny being far more frequent than any other crime. It is interesting to note how dispersed the types of Felonies get after the top 11 categories. Note that the violent crimes of Robbery, Felony Assault, and Rape appear on this list.  
 
-For Misdemeanors, we see Petit Larceny atop the list, with the top five categories accounting for 10% or more each. Note that Dangerous Drugs is split between Misdemeanors and Felonies, and there are Misdemeanor Assault crimes. The Violent Crimes categories on this chart include Assault 3.  
+For Misdemeanors, we see Petit Larceny atop the list, with the top five categories accounting for 10% or more (of Misdemeanors) each. Note that Dangerous Drugs is split between Misdemeanors and Felonies, and there are Misdemeanor Assault crimes. The Violent Crimes categories on this chart include Assault 3.  
 
 This list of Violations is surprising. Following the Pareto principle, if you could stop all Harrassment (2), you’d solve for nearly all Violations! The small share of other violations is divided by a lot of categories, showing how infrequently we see them in this data.  
 
@@ -479,7 +438,7 @@ This list of Violations is surprising. Following the Pareto principle, if you co
 
 
 
-**Where: Where does crime take place? **  
+####**Where: Where does crime take place? **  
 
 The question of where crime happens has multiple perspectives of import:  
 
@@ -487,7 +446,7 @@ The question of where crime happens has multiple perspectives of import:
 * Should we adjust policing strategies to try to reduce crime in high crime areas?
 
 
-<span style="color:darkblue">Borough Analysis</span>
+<span style="color:darkblue">Borough Analysis</b></span>
 
 Like Level is to Crime as a whole, Borough is to The City of New York. The first question about location is the most macro: how does crime differ in the five Boroughs?  
 
@@ -531,7 +490,7 @@ mosaic(Level~Boro,df_bsum, direction=c("v","h"), main="Crime per Capita by Borou
 
 By looking at the 2010 Census data by Borough, and comparing that to the overall crime per Borough, we see that the Per Capita view shows a rather different story of crime. Staten Island, due to its small population, actually has a higher crime **rate** than some other boroughs. In fact, we see less crime per capita in Queens and Brooklyn than the overall crime totals would have us understand
   
-<span style="color:darkblue"> Crime by Level, Borough and Time </span>
+<span style="color:darkblue"> <b>Crime by Level, Borough and Time </b></span>
 
 We also have official estimates of the population for 2016, so we can look at both Level and Time, comparing 2010 Per Capita to 2016 Per Capita.  
 
@@ -604,26 +563,11 @@ ggplot(tidy_bsum, aes(x=Year, y=PerCap, fill=Level))+
   
 From these graphs, we see how there is an apparent drop in the rate of crime between 2010 and 2016, mostly driven by Misdemeanors (in every Borough, but most predominantly in the Bronx). We can see that the Felony rate has been mostly unchanged, except in Manhattan. Violations have gone up in every Borough except Staten Island. (We will explore more about crime over time in the When section.)  
 
-<span style="color:darkblue"> Crime over two time periods </span>
+<span style="color:darkblue"> <b>Crime over two time periods </b></span>
 
-```{r, fig.height=6}
+We also found that there are some notable differences between Boroughs in the Per Capita Crime Rates. Manhattan leads the way on Felonies, followed by the Bronx. The top two are in opposite order for Misdemeanors. But it is Staten Island and the Bronx that lead in Violations. For lowest rates, Staten Island is lowest for Felonies, followed by Queens, with Queens lowest for Misdemeanors and Violations. Hence, the crime profile is quite different in each Borough.  
 
-ggplot(tidy_bsum, aes(x=reorder(Boro, -PerCap), y=PerCap, fill=Year))+
-  geom_bar(stat="identity",position="dodge") +
-  scale_fill_discrete(name="Year",
-                      #breaks=c(1, 2),
-                      labels=c("2010 Census", "2016 Estimate")) +
-  xlab("Borough")+ylab("Per Capita Crime") +
-  facet_wrap(~Year+Level, scales = "free") +
-  theme(axis.text.x=element_text(angle=90,hjust=1))+
-  scale_fill_brewer(palette="Paired") +
-  ggtitle("Per Capita Crime Rates by Level by Borough by Time")  
- 
-```
-
-From this view, we also see there there are some notable differences between Boroughs in the Per Capita Crime Rates. Manhattan leads the way on Felonies, followed by the Bronx. The top two are in opposite order for Misdemeanors. But it is Staten Island and the Bronx that lead in Violations. For lowest rates, Staten Island is lowest for Felonies, followed by Queens, with Queens lowest for Misdemeanors and Violations. Hence, the crime profile is quite different in each Borough.  
-
-<span style="color:darkblue"> Main Categories of Crime by Borough </span>
+<span style="color:darkblue"> <b>Main Categories of Crime by Borough </b></span>
 
 
 We can also get more specific about the top 6 types of crime, in terms of crime in the Boroughs.  
@@ -662,10 +606,11 @@ Several observations can be made from this view:
 ```
 
 This view makes the data easier to compare these types of crime within Boroughs. Brooklyn, for instance, has to most even distribution of crime across these categories, while Manhattan has much higher proportion of Petit Larceny than any of the other categories here. 
-Drugs and Violent Crime: This graph also reinforces how significantly Dangerous Drugs factor into crime in the Bronx, given how that category is nearly as prevalent as any other. It’s also worth noting where Assault factors in for each Borough: In Manhattan, it’s vastly outnumbered by each type of Larceny, relatively high in the Bronx and Queens, and sort of in the middle in Brooklyn.  
+
+**Drugs and Violent Crime:** This graph also reinforces how significantly Dangerous Drugs factor into crime in the Bronx, given how that category is nearly as prevalent as any other. It’s also worth noting where Assault factors in for each Borough: In Manhattan, it’s vastly outnumbered by each type of Larceny, relatively high in the Bronx and Queens, and sort of in the middle in Brooklyn.  
 
 
-<span style="color:darkblue"> Location Analysis  </span>
+<span style="color:darkblue"> <b>Location Analysis  </b></span>
 
 The dataset includes a field called “PREM_TYP_DESC” (which we have shortened to **PremDesc**) to indicate where the crime took place, such as on the street, in a house, etc. It turns out that about 85% of crime occurs on the Streets or within a Residence of one type or another.  
 
@@ -688,88 +633,12 @@ The dataset includes a field called “PREM_TYP_DESC” (which we have shortened
   
 ```
 
-Here we see how crime on the Street is the largest, single category (nearly 40%), but if you add together the various Residence categories, Residences total 45%. This vastly outnumbers the Subway, Commercial buildings, etc.  
+Here we see how crime on the Street is the largest, single category (nearly 40%), but if you add together the various Residence categories, Residences total 45%. This vastly outnumbers the Subway, Commercial buildings, etc. While Felonies and Misdemeanors follow the same pattern as crime, overall,more Violations happen in Apartments than on the street.
 
-```{r fig.height=4, fig.width=12}
-crime_place_2 <- crime_df %>%
-                 filter(!is.na(PremDesc),Level !="") %>%
-                 group_by(Level,PremDesc) %>%
-                 summarize(count=n()) %>%
-                 top_n(n=10, wt=count) %>%
-                 mutate(rel_freq = count/sum(count)) %>%
-                 ungroup() %>%
-                 arrange(Level, rel_freq) %>%
-                 unite("PremLevel", PremDesc, rel_freq, sep = "_", remove = FALSE) %>%
-                 data.frame() %>%
-                 mutate(PremLevel = factor(PremLevel, levels = PremLevel))
-
-  ggplot(crime_place_2, aes(PremLevel, rel_freq)) +
-    geom_bar(stat="identity") +
-    facet_wrap(~Level, scales="free") +
-    coord_flip() +
-    ylab("Crime Count Frequency") +
-    xlab("Place of Crime - Premises") +
-    scale_x_discrete(breaks=crime_place_2$PremLevel,labels=crime_place_2$PremDesc) +
-    ggtitle(" Place of Crime Distribution Across Crime Categories")
-  
-```
-While Felonies and Misdemeanors follow the same pattern as crime, overall, this graph shows that more Violations happen in Apartments than on the street.
+Violent Crimes and Dangerous Crimes also follow the same pattern as Crime overall.  
 
 
-```{r}
-
-#Generate violent crime dataframe
-#filter for violent crime
-violent_crime_df <- crime_df %>% filter(OffenseDesc == "ASSAULT 3 & RELATED OFFENSES" | 
-                                          OffenseDesc == "FELONY ASSAULT" | 
-                                          OffenseDesc == "MURDER & NON-NEGL. MANSLAUGHTER" |  
-                                          OffenseDesc == "RAPE" |
-                                          OffenseDesc == "ROBBERY" |
-                                          IntOffenseDesc == "AGGRAVATED SEXUAL ASBUSE" |
-                                          IntOffenseDesc == "ASSAULT 2,1,UNCLASSIFIED" |
-                                          IntOffenseDesc == "ASSAULT 3" |
-                                          IntOffenseDesc == "RAPE 1" |
-                                          IntOffenseDesc == "ROBBERY,OPEN AREA UNCLASSIFIED" |
-                                          IntOffenseDesc == "SEXUAL ABUSE" |
-                                          IntOffenseDesc == "SEXUAL ABUSE 3,2")
-#Generate dangerous drugs dataframe
-drugs_crime_df <- crime_df %>% filter(OffenseDesc == "DANGEROUS DRUGS")
-
-violent_crime_place <- violent_crime_df %>%
-  filter(!is.na(PremDesc),Level !="") %>%
-  group_by(PremDesc) %>%
-  summarize(count=n()) %>%
-  top_n(n=10, wt=count) %>%
-  mutate(rel_freq = count/sum(count))
-
-v1 <- ggplot(violent_crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
-  geom_bar(stat="identity") +
-  coord_flip() +
-  ylab("Crime Count Frequency") +
-  xlab("Place of Crime - Premises") +
-  ggtitle(" Top Ten Violent Crime Premises")
-
-drugs_crime_place <- drugs_crime_df %>%
-  filter(!is.na(PremDesc),Level !="") %>%
-  group_by(PremDesc) %>%
-  summarize(count=n()) %>%
-  top_n(n=10, wt=count) %>%
-  mutate(rel_freq = count/sum(count))
-
-d1 <- ggplot(drugs_crime_place, aes(fct_reorder(PremDesc, rel_freq), rel_freq)) +
-  geom_bar(stat="identity") +
-  coord_flip() +
-  ylab("Crime Count Frequency") +
-  xlab("Place of Crime - Premises") +
-  ggtitle(" Top Ten Dangerous Drugs Crime Premises")  
-
-  grid.arrange(v1,d1)
-```
-
-Violent Crimes and Dangerous Crimes also follow the same pattern as Crime.  
-
-
-<span style="color:darkblue"> Precinct differences  </span>
+<span style="color:darkblue"> <b>Precinct differences  </b></span>
 
 In terms of where, we can also look at the police precincts. 
 
@@ -791,19 +660,14 @@ df_pbl%>%ggplot(aes(reorder(Pct, count), count,fill=Level)) + geom_bar(stat = "i
 grid.arrange(p5,p6,nrow=1)
 ```
 
-The graphs above tell us that crime is not evenly distributed across police precincts. You can see how the Bronx has crime consolidated into a smaller number of precincts, while Manhattan has crime distributed across more numerous precincts. All Boroughs seem to have a precinct or two that handle far more crime, perhaps twice as much crime, as other precincts in the same Borough.
+The graphs above shows that crime is not evenly distributed across police precincts. You can see how the Bronx has crime consolidated into a smaller number of precincts, while Manhattan has crime distributed across more numerous precincts. All Boroughs seem to have a precinct or two that handle far more crime, perhaps twice as much crime, as other precincts in the same Borough.
 
 
-**When: has crime changed over time? When, during the year, week or day, does crime take place?**
+####**When: has crime changed over time? When, during the year, week or day, does crime take place?**
 
-<span style="color:darkblue"> General Decreasing Trend over 2006 to 2016 </span>
+<span style="color:darkblue"> <b>General Decreasing Trend over 2006 to 2016 </b></span>
 
-
-We can see from this graph that the total amount of crime has decreased over the past ten years. (We have zoomed in on this graph to more easily detect the differences, noting that we’re looking at about 12% of the range of that axis.) By looking closely, we can see that the total crime level has decreased every year except 2012, but 2012 didn’t rise above 2010. We do see an overall decreasing trend.
-
-Do we see similar decreases at all levels? 
-
-In considering the decreasing trend, we note different patterns depending upon the Level of crime we’re examining.
+The total amount of crime has decreased over the past ten years.
 
 
 ```{r}
@@ -824,7 +688,7 @@ byDateLawMean%>%ggplot()+
 
 ```
 
-One view is this daily chart. It shows a cyclical, annual pattern, as well as the overall downward trend. We also see strange spikes around the start of every year.These spikes are, in fact, on January 1, and we see that the highest number of crimes across the entire dataset are on January 1 through the years.
+One view is this daily chart. It shows a cyclical, annual pattern, as well as an overall downward trend. We also see strange spikes around the start of every year. These spikes are, in fact, on January 1, and we see that the highest number of crimes across the entire dataset are on January 1 through the years.
 
 This could be a data quality issue: where the date of the crime is unknown, and hence labelled as the first of the year. This could also be a true phenomenon associated with New Year’s Day, with more crime happening on that day. It could be some of each. We have left it as it stands in the dataset, but it shows up in the following graphs because of the large outliers that they are.
 
@@ -851,6 +715,9 @@ ggplot(totalCntBySD)+geom_point(aes(count,Year),size=5)+xlim(min(totalCntBySD$co
 grid.arrange(p1,p2,p3,p4,nrow=2)
 ```
 
+ *(We have zoomed in on this graph to more easily detect the differences, noting that we’re looking at about 12% of the range of that axis.)* 
+ 
+We can see that the total crime level has decreased every year except 2012, but 2012 didn’t rise above 2010. We do see an overall decreasing trend.
 
 Felonies dropped considerably from 2006 to 2009, but then seemed to stabilize at a new level, approximately 12% lower than 2006.
 
@@ -881,12 +748,12 @@ grid.arrange(p1,p2,nrow=2)
 ```
 
 
-When we focus on Violent Crime, we see some features from the Felony graph (the drop from 2006 to 2009, the spike at 2012), but most years have a level around 93,000 to 94,000 such crimes which make the other years look almost like outliers, rather than part of a trend. 
+When we focus on **Violent Crime**, we see some features from the Felony graph (the drop from 2006 to 2009, the spike at 2012), but most years have a level around 93,000 to 94,000 such crimes which make the other years look almost like outliers, rather than part of a trend. 
 
 
-Dangerous Drugs, however, follows the pattern we saw in the Misdemeanor case: after 2012, the yearly rate is lower. Progress seems to have been made.
+**Dangerous Drugs**, however, follows the pattern we saw in the Misdemeanor case: after 2012, the yearly rate is lower. Progress seems to have been made.
 
-<span style="color:darkblue"> Time of year and Time of day: </span>
+<span style="color:darkblue"> <b>Time of year and Time of day: </b></span>
 
 Again, we’ll work from the Macro (years) to the Micro. These graphs will tell us more specifics about when crime happens more (or less). 
 
@@ -944,7 +811,8 @@ grid.arrange(p1,p2,p3,p4,nrow=2)
 
 
 Several observations:  
-* **Month**: We can easily see that crime peaks in the summer, or when weather is warmer, as the bar graphs for all three Levels tend to bulge from June through September. The exception is in January, which may be due to the irregular January 1 data (see above) * **Day of the Month**: There seems to be no difference, except for the first of the month. That could indicate a similar phenomenon as the January 1 phenomenon.  
+* **Month**: We can easily see that crime peaks in the summer, or when weather is warmer, as the bar graphs for all three Levels tend to bulge from June through September. The exception is in January, which may be due to the irregular January 1 data (see above) 
+* **Day of the Month**: There seems to be no difference, except for the first of the month. That could indicate a similar phenomenon as the January 1 phenomenon.  
 * **Day of the Week**: Most crimes on Friday, least on Sunday. People going out on Friday night?  
 * **Hour of the Day**: a peak around lunch and again after work, a lull after the bars have been closed for an hour. In other words, times when the streets are filled with people have more crime than when most people are asleep.  
 
@@ -984,17 +852,20 @@ A few observations from this heat map:
 
 * That dark, blue/purple box represents “Loitering/DeviateSex” at 4am, with a green box at 3am. Just a coincidence that as bars are getting set to close, and after they close, we see a lot of people milling around, “loitering”?  
 * We can also see a peak for “Intoxicated/Impaired” in the 3am hour, just before bars close  
-* There is an odd pattern with “Under the Influence of Drugs” bunches up in three specific hours: Midnight, 9am and 6pm. 
+* There is an odd pattern: “Under the Influence of Drugs” bunches up in three specific hours: Midnight, 9am and 6pm. 
 * Generally, most crime categories show a relatively even distribution across the clock, with higher proportions in the afternoon, and lower proportions in the early morning, in the hours between 5 and 7am.  
 
 
-**Why: what factors may contribute to more (or less) crime?**
+####**Why: what factors may contribute to more (or less) crime?**
 
 We came up with a series of ideas of factors that may contribute to the volume of crime. Each required we find a daily dataset with variables we could add to our main dataset.  
 
 We began with temperature data from NOAA.
 
-<span style="color:darkblue"> Temperature: Hotter vs. colder  </span>
+<span style="color:darkblue"> <b>Temperature: Hotter vs. colder  </b></span>
+
+We found that in nearly all precincts, the colder days have fewer crimes committed than on days with hot weather. We can also look to see if the effect is different for the level of the crime.
+
 
 ```{r, fig.width = 8, fig.height = 5}
 ########################################################################################
@@ -1011,32 +882,6 @@ weather_data$TMAX <- as.numeric(weather_data$TMAX)
 crime_w_df <- crime_w_df[weather_data, on=.(DateStart = DATE)]
 #crime_w_df <-  merge(crime_df,weather_data,by="DateStart")
 
-#Generate plot to compare average number of crimes on cold days as compared to hot days
-hot_day_summary <- crime_w_df %>% filter(TMAX > 90) %>% group_by(Pct) %>% summarize(count_hot = n(), n_days_hot = n_distinct(DateStart), Hot = count_hot/n_days_hot) %>% drop_na() %>% select(Pct, Hot)
-cold_day_summary <- crime_w_df %>% filter(TMAX < 20) %>% group_by(Pct) %>% summarize(count_cold = n(), n_days_cold = n_distinct(DateStart), Cold = count_cold/n_days_cold) %>% drop_na() %>% select(Pct, Cold)
-#Merge the two summary tables together
-temp_summary <- hot_day_summary  %>% left_join(cold_day_summary, by = c("Pct" = "Pct"))
-temp_summary$Pct <- as.factor(temp_summary$Pct)
-#Tidy the summary table
-tidy_temp_summary <- temp_summary %>% gather(key = "Temp", value = "AvgDailyReports", -Pct)
-temp_summary_diff <- temp_summary %>% mutate(Delta = Cold - Hot)
-
-temp_summary_arr <- temp_summary_diff %>% arrange(Hot)
-temp_summary_arr <- temp_summary_arr %>% mutate(Pct = factor(Pct, Pct))
-cols <- c("Hot Days" = "red", "Cold Days" = "blue")
-ggplot(temp_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Hot, color="Hot Days"), size=1) + 
-  geom_step(aes(x=Pct, y=Cold, color="Cold Days"), size=1) + 
-  scale_color_manual(name = "Temperature", values = cols) + 
-  theme(axis.text.x=element_text(angle=90,hjust=1)) +
-  labs(x= "Precinct", y = "Average Number of Crimes per Day") +
-  ggtitle("Average crimes per Day on Hot/Cold Days")
-```
-
-This graphs shows that in nearly all precincts, the colder days have fewer crimes committed than on days with hot weather. We can also look to see if the effect is different for the level of the crime.
-
-<span style="color:darkblue" Slope by Level  </span>
-
-```{r  }
 ### Relationship between max temp and crime volume
 # set up the data by day and Level
 daily_df <-crime_w_df %>% group_by(DateStart,Level) %>% summarize(CrimeCount=n(),MaxTemp=mean(TMAX))
@@ -1061,7 +906,9 @@ ggplot(daily_df, aes(x=MaxTemp, y=CrimeCount, color=Level)) +
   geom_abline(slope=vlm[["coefficients"]][["MaxTemp"]],intercept=vlm[["coefficients"]][["(Intercept)"]]) +
   annotate("text", x= 25, y=200, label=paste0("y=",round(vlm[["coefficients"]][["MaxTemp"]],2),"x+",round(vlm[["coefficients"]][["(Intercept)"]],0))) +
   ggtitle("Daily Crime Counts vs. Temperature by Level of Crime with Linear Models")
+
 ```
+
 
 This shows us how temperature is related to crime in all three levels: the warmer it is, the more crime. The steepest slope is for Misdemeanors, meaning the greatest impact of temperature is on that level of crime, followed by Felonies.    
 
@@ -1101,8 +948,8 @@ dvlm<- lm(CrimeCount~MaxTemp, daily_violent_df)
 d1 <- ggplot(daily_violent_df, aes(x=MaxTemp, y=CrimeCount)) + 
   geom_point(alpha=0.5) +
   geom_abline(slope=dvlm[["coefficients"]][["MaxTemp"]],intercept=dvlm[["coefficients"]][["(Intercept)"]]) +
-  annotate("text", x= 25, y=300, label=paste0("y=",round(dvlm[["coefficients"]][["MaxTemp"]],2),"x+",round(dvlm[["coefficients"]][["(Intercept)"]],0)))+
-  ggtitle("Daily Violent Crime Counts vs. Temperature by Level of Crime with Linear Model")+
+  annotate("text", x= 25, y=375, label=paste0("y=",round(dvlm[["coefficients"]][["MaxTemp"]],2),"x+",round(dvlm[["coefficients"]][["(Intercept)"]],0)))+
+  ggtitle("Daily Violent Crime Counts vs. Temperature by Level of Crime w/Linear Model")+
   scale_y_continuous(limits = c(0, 625))
 
 # derive linear model
@@ -1114,17 +961,17 @@ ddlmp<-round(summary(ddlm)$coefficients[2,4],5)
 d2 <- ggplot(daily_drug_df, aes(x=MaxTemp, y=CrimeCount)) + 
   geom_point(alpha=0.5) +
   geom_abline(slope=ddlm[["coefficients"]][["MaxTemp"]],intercept=ddlm[["coefficients"]][["(Intercept)"]]) +
-  annotate("text", x= 25, y=200, label=paste0("y=",round(ddlm[["coefficients"]][["MaxTemp"]],2),"x+",round(ddlm[["coefficients"]][["(Intercept)"]],0)," p-value:",ddlmp))+
-  ggtitle("Daily Dangerous Drug Crime Counts vs. Temperature by Level of Crime with Linear Model") +
+  annotate("text", x= 25, y=300, label=paste0("y=",round(ddlm[["coefficients"]][["MaxTemp"]],2),"x+",round(ddlm[["coefficients"]][["(Intercept)"]],0)," p-value:",ddlmp))+
+  ggtitle("Daily Dangerous Drug Crime Counts vs. Temperature by Level of Crime w/Linear Model") +
   scale_y_continuous(limits = c(0, 625))
 
 grid.arrange(d1,d2)
 ```
 
-For both Violent Crime and Dangerous Drugs, we see an effect of temperature: the warmer it is, the more crime. However, the effect is much stronger for Violent Crimes. While there is an effect for Dangerous Drugs, it is hard to perceive from the graph, but the slope is positive and the p-value is less than .001 for the linear model.
+For both **Violent Crime** and **Dangerous Drugs**, we see an effect of temperature: the warmer it is, the more crime. However, the effect is much stronger for Violent Crimes. While there is an effect for Dangerous Drugs, it is hard to perceive from the graph, but the slope is positive and the p-value is less than .001 for the linear model.
 
 
-<span style="color:darkblue"> Precipitation </span>
+<span style="color:darkblue"> <b>Precipitation </b></span>
 
 We continue with our weather data to see if rain makes a difference in crime. 
 
@@ -1224,21 +1071,21 @@ s3 <- ggplot(dg_df_rain, aes(x=PRCP, y=Count)) +
 grid.arrange(s1,s2,s3)
 ```
 
-For all three Levels of Crime, we see negative slopes, indicating that more rain suggest less crime. This is not very surprising as we would expect less people to be out on days with bad weather. As with Temperature, the effect is stronger for the more numerous of crimes. 
+For all three Levels of Crime, we see negative slopes, indicating that more rain suggest less crime. This is not very surprising as we would expect fewer people to be out on days with bad weather. As with Temperature, the effect is stronger for the more numerous of crimes. 
 
 A lot of the data is on days with no rain, and you can read right off the graph that there is a fairly wide range of daily crime rate. However, as the amount of rain starts to register, the density of the dots seem to shift downward.   
 
-* Does precipitation affect levels of Drug and Violent crimes?  
+* **Does precipitation affect levels of Drug and Violent crimes?**  
 
-When looking at the same analysis after filtering only on Violent Crimes, we see a relationship very similar to that of felonies, which is what we would expect considering most violent crimes are felonies.
+When looking at the same analysis after filtering only on **Violent Crimes**, we see a relationship very similar to that of felonies, which is what we would expect considering most violent crimes are felonies.
 
-The pattern for Dangerous Drugs is similar: less violent crime on rainy days.
+The pattern for **Dangerous Drugs** is similar: less violent crime on rainy days.
 
 
 
-<span style="color:darkblue"> Full Moon </span>
+<span style="color:darkblue"> <b>Full Moon </b></span>
 
-We brought in data on the phases of the moon, just to test the idea that with a full moon we might see more crime. Articles such as in Decoded Science (https://www.decodedscience.org/full-moons-crime-aka-lunar-effect-real-deal-pseudoscience/41881) examine the issue, but we thought we could examine it in our dataset.
+We brought in data on the phases of the moon, in order to test the idea that with a full moon, we might see more crime. Articles such as in *Decoded Science* (https://www.decodedscience.org/full-moons-crime-aka-lunar-effect-real-deal-pseudoscience/41881) examine the issue, but we thought we could examine it in our dataset.
 
 ```{r, fig.width = 9, fig.height = 8}
 moon_summary <- crime_w_df %>% 
@@ -1309,7 +1156,7 @@ pie3 <- ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = pha
 grid.arrange(pie1,pie2,pie3)
 ```
 
-*Graph note: We debated (hotly) about using Pie Charts for this data. On one hand, a bar chart would be at least equally capable of demonstrating the lack of difference the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and were were inspired by the moon!*
+*Graph note: We debated (hotly) about using Pie Charts for this data. On the one hand, a bar chart would be at least equally capable of demonstrating the lack of difference the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and were were inspired by the shape of the moon!*
 
 We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
 
@@ -1317,11 +1164,11 @@ One other finding of interest: since the lunar cycle is independent of our calen
 
 
 
-<span style="color:darkblue"> Unemployment : Does lack of employment impact crime rates?
+<span style="color:darkblue"> <b>Unemployment : Does lack of employment impact crime rates?</b></span>
 
 We decided to bring in unemployment data for the city. 
 
-```{r}
+```{r, message=FALSE}
 ########################################################################################
 #Read in UnEmployment data from file
 
@@ -1358,10 +1205,10 @@ ggplot(crime_e_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Avera
  
 
 ```
+
 Upon visual inspection of the annual crime rate and the unemployment rates, we see the points seem to follow a similar pattern of decline after 2010.
 
-
-As we could anticipate from the Cleveland Dot Plots, we see that pattern in the scatterplot. There are three years of exception (upper left corner). This leads us to wonder if the economy plays a role in this finding, too.
+As we could anticipate from the Cleveland Dot Plots, we see that pattern in the scatterplot. There are three years of exception (lower right corner). This leads us to wonder if the economy plays a role in this finding, too.
 
 
 ```{r echo=FALSE}
@@ -1390,7 +1237,7 @@ sumtabInput <- crime_df_append %>% group_by(Boro, Level,DrugOrViolent) %>% summa
 # initialize form of desired table
 sumtab <- data.frame(Type=character(),Total=character(),Bronx=character(),Brooklyn=character(),Manhattan=character(),Queens=character(),StatenIsland=character())
 # store column names
-sumtabnames <- c("Type", "Total","Bronx","Brooklyn","Manhattan","Queens","StatenIsland")
+sumtabnames <- c("Type", "Overall","Bronx","Brooklyn","Manhattan","Queens","Staten Island")
 # get totals by level, percent by level
 leveltot <- sumtabInput %>% group_by(Level) %>% summarize(Crimes=sum(Crimes))
 leveltot$Prct <- leveltot$Crimes/sum(leveltot$Crimes)
@@ -1451,7 +1298,7 @@ sumtab <-rbind(sumtab,felrow,misrow,viorow,vcrow,ddrow)
 ```
 
 
-### <span style="color:darkblue">Executive Summary </span>
+### <span style="color:darkblue">Executive Summary </b></span>
 
 #### Introduction:  
 
@@ -1466,14 +1313,16 @@ Our main findings:
 * Queens has less crime per capita than Manhattan and the Bronx 
 * By pure count, Misdemeanors account for the majority of crime  
 * The weather and unemployment have an influence on crime
+* Decreases in Felonies followed by Misdemeanors may reflect police enforcement policy efforts
 
 
 ```{r echo=FALSE}
-kable(sumtab)
+kable(sumtab) %>%
+    row_spec(4:5, italic = T, background = "#DCD0C0")
 ```
 
 
-**What kinds of crime?** 
+####**What kinds of crime?** 
 
 Misdemeanors make up nearly 60% of all crimes, with Felonies numbering 30%. Violations make up the remaining 10%.
 
@@ -1501,13 +1350,13 @@ Two categories of Larceny wind up in the top five; Petit (16%) and Grand (8%) ma
 
 ```
 
-**Where does crime take place?** 
+####**Where does crime take place?** 
 
 Queens is the most crime free borough when you consider crimes committed per person, though felonies are more prevalent. Manhattan and the Bronx tend to have more crime. 
 
 Streets and Residences (of one type or another) account for 85% of the locations of crime.
 
-**When does crime take place? What have been the trends?**
+####**When does crime take place? What have been the trends?**
 
 Crime has been decreasing, in general, over the past ten years. We found that Felonies dropped first (about 12%), then a couple of years later, Misdemeanors dropped about the same amount. While Violent Crimes have been pretty steady (though lower that 2006 levels), Dangerous Drug Crimes have dropped more significantly.
 
@@ -1532,25 +1381,30 @@ ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
     
 ```
 
-**Why does crime happen? What contributes?**
+####**Why does crime happen? What contributes?**
 
 The weather impacts crime! There’s more crime when it is hotter, especially misdemeanors. There’s less crime when it rains. Violent Crimes happen more often when it is hot, less often when rainy. Dangerous Drug crimes are less affected by the heat, but do happen less often with rain.
 
-The phase of the moon has no impact on crime. None.
+```{r echo=FALSE}
 
-Unemployment, particularly after 2009, seems to correlate with crime.
-```{r echo=FALSE, fig.width=16, fig.height=10}
+tidy_crime_w <- crime_w_df %>% group_by(DateStart) %>% summarize(CrimeCount=n(),TMAX=mean(TMAX))
+tidy_crime_w$HotCold <- ifelse(tidy_crime_w$TMAX > 90, "Hot", ifelse(tidy_crime_w$TMAX < 20, "Cold","Neither"))
+tidy_crime_w <- tidy_crime_w %>% filter(HotCold != "Neither")
 
-ggplot(temp_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Hot, color="Hot Days"), size=1) + 
-  geom_step(aes(x=Pct, y=Cold, color="Cold Days"), size=1) + 
-  scale_color_manual(name = "Temperature", values = cols) + 
-  theme(axis.text.x=element_text(angle=90,hjust=1)) +
-  labs(x= "Precinct", y = "Average Number of Crimes per Day") +
-  ggtitle("Average crimes per Day on Hot/Cold Days") +
-    theme_gray(14) + scale_color_colorblind()
+ggplot(tidy_crime_w, aes(HotCold, CrimeCount)) + 
+  geom_boxplot()+
+  labs(x="Cold days (under 20°) vs. Hot days (over 90°)", y="Count of Crimes") +
+  ggtitle("Weather Impact on Crime") +
+  theme_gray(14) + scale_color_colorblind()
 ```
 
-### <span style="color:darkblue">Interactive Component </span>
+The phase of the moon has no impact on crime. *None.*
+
+Unemployment, particularly after 2009, seems to correlate with crime.
+
+
+
+### <span style="color:darkblue">Interactive Component </b></span>
 
 Our goal with the interactive application was to give the user the ability to explore both spatial relationships as well as summary statistics relating to our dataset on NYC crime.  The application was developed using the Shiny application development environment provided in R-studio.
 
@@ -1561,41 +1415,50 @@ Application URL -> https://nycrimeanalysis.shinyapps.io/CrimeDataNYCApp/
 There are two tabs for the user to select.  The user input selections on the left side panel change depending on which tab the user selects.
  
 #### Maps Tab:   
-The first tab, labeled “Maps” provides the user with the option to select a specific date and borough of interest.  If the user would like to consider all 5 boroughs, that is also an option.  The application will filter the dataset based on the user’s selections and render an interactive map, the type of which is determined by the user’s selection under the “Select Display Geographic Map” pull down menu.  In addition to this, below the user input selections on the left side panel, a word cloud is displayed indicating the relative frequency of different offense descriptions. 
+The first tab, labeled “Maps” provides the user with the option to select a specific date and borough of interest.  If the user would like to consider all five boroughs, that is also an option.  The application will filter the dataset based on the user’s selections and render an interactive map, the type of which is determined by the user’s selection under the “Select Map Type” pull down menu.  
+
+In addition, below the user input selections on the left side panel, a word cloud is displayed indicating the relative frequency of different offense descriptions.
+
 If “Point” is selected, the user can view the locations of every crime incident that occurred on that day.  Clusters of crimes are grouped together with a label indicating the number of incidents in that cluster.  As the user zooms in or clicks on clusters the individual crime incidents become visible.  As the user mouses over the point a tooltip popup will display the level of the crime, the precinct it occurred in, and a brief description of the offense.
+
 If “Density” is selected, the user will see a two-dimensional density plot of the crimes that occurred on that day.  This allows the user to identify areas of the city with the highest density and lowest density of crime.
+
 If “Precincts” is selected, the user will see a static display of the geographic outlines for all 77 police precincts.  As the user mouses over each polygon, a tooltip pop up will display the precinct number.
+
 All maps are interactive, such that the user can pan and zoom as needed.
 
 #### Summary Tab:  
 Under the “Summary” Tab, the user will have the option to generate summary statistics for a range of dates they are interested in.  The horizontal bar chart on the right shows the total crime incidents reported over the selected date range and allows the user to break up the categories with a primary and secondary variable selection.  As the user mouses over each bar, a pop-up will display the number of crime incidents in that section.  Below the user input section on the left side panel is a summary table showing the data plotted in the right main panel.
 
 
-### <span style="color:darkblue"> Conclusion </span>  
+### <span style="color:darkblue"> <b>Conclusion </b></span>  
 
-**Limitations:**  
+####**Limitations:**  
 
-* Time: there are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
-* Brevity: We could have had twice as many graphs, as this data was pretty rich and nuanced, and our explorations took multiple directions and multiple techniques for visualizing the data  
-* Technical issues:
-+ Size of the dataset made it difficult to run in a free ShinyApp    
-+ Different browsers resulted in different response from the ShinyApp
+* **Time**: there are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
+* **Brevity**: We could have had twice as many graphs, as this data was pretty rich and nuanced, and our explorations took multiple directions and multiple techniques for visualizing the data  
+* **Technical issues**:
+    + Size of the dataset made it difficult to run in a free ShinyApp    
+    + Different browsers resulted in different response from the ShinyApp
 
-**Future Directions:** 
+####**Future Directions:** 
+
 * Testing more hypotheses with other data sets  
-* Stop and Frisk  
-* More economic indicators  
+    + Stop and Frisk  
+    + More economic indicators  
 * Deeper dive on sociological measures and testing against Violent Crime and Drugs  
 * Converting sets of graphs into interactive graphs, possibly through D3
 
-**Lessons Learned**   
+####**Lessons Learned**   
+
 * Didn’t take full advantage of github to coordinate works from group members, a lot of merging were done manually. Need to get more familiar with how github can help to merging contribution from team members.  
 * Teaming with 5 part-time people from different time zones and with only online meeting required more coordination
 
 
-**Disagreements:**  
-* Had disagreement on whether we should use a pie chart or not  
-* Had disagreement on whether we should change the column names of the dataset 
+####**Debates:**  
+
+* We debated whether we should use a pie charts or not  
+* We debated if we should change the column names of the dataset 
 
 
 
