@@ -41,6 +41,7 @@ library(data.table)
 library(lubridate)
 library(RColorBrewer)
 library(knitr)
+library(ggthemes)
 ```
 
 
@@ -467,7 +468,16 @@ v <- ggplot(crime_top_violation, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
   ggtitle(" Top Violation Crime Offense Categories")
 
   grid.arrange(f,m,v )
-```
+```  
+Felonies start with Grand Larceny, Robbery, Felony Assault and Burglary, with Grand Larceny being far more frequent than any other crime. It is interesting to note how dispersed the types of Felonies get after the top 11 categories. Note that the violent crimes of Robbery, Felony Assault, and Rape appear on this list.  
+
+For Misdemeanors, we see Petit Larceny atop the list, with the top five categories accounting for 10% or more each. Note that Dangerous Drugs is split between Misdemeanors and Felonies, and there are Misdemeanor Assault crimes. The Violent Crimes categories on this chart include Assault 3.  
+
+This list of Violations is surprising. Following the Pareto principle, if you could stop all Harrassment (2), you’d solve for nearly all Violations! The small share of other violations is divided by a lot of categories, showing how infrequently we see them in this data.  
+
+
+
+
 
 **Where: Where does crime take place? **  
 
@@ -1311,7 +1321,43 @@ One other finding of interest: since the lunar cycle is independent of our calen
 
 We decided to bring in unemployment data for the city. 
 
+```{r}
+########################################################################################
+#Read in UnEmployment data from file
 
+UnEmployment_data <- fread("../Data_Files/unempCSV.csv", na.strings="", stringsAsFactors = FALSE)
+
+UnEmployment_data$year <-as.character(UnEmployment_data$Year)
+names(UnEmployment_data)[names(UnEmployment_data) == 'Ann Avg'] <- 'AnnAvg'
+#UnEmployment_data
+UnEmployment_data<-UnEmployment_data %>% select("year","AnnAvg")%>% drop_na()
+
+
+crime_df%>%mutate(year=as.character(year(DateReport)))%>%group_by(year)%>%dplyr::summarise(CntByYear=n())%>% drop_na()->crime_e_df
+
+
+crime_e_df <- merge(x=crime_e_df,y=UnEmployment_data,by.x="year",by.y="year")
+
+### Relationship between max temp and crime volume
+## set up the data by day and Level
+crime_e_df <-crime_e_df %>% group_by(year) %>% summarize(CrimeCount=sum(CntByYear),AnnAvg,unEmpCrimeRatio =((AnnAvg)/sum(CntByYear)))
+
+require(gridExtra)
+x1 =ggplot(crime_e_df, aes(x=year,y=AnnAvg)) +
+  geom_point( alpha=0.3)+ xlab("Year")
+ylab("Annual Unemployment")
+ 
+x2=  ggplot(crime_e_df, aes(x=year,y=CrimeCount)) +
+  geom_point( alpha=0.3)+xlab("Year") +
+ylab(" Yearly Crime count ")
+ 
+
+
+grid.arrange(x1,x2)
+ggplot(crime_e_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")
+ 
+
+```
 Upon visual inspection of the annual crime rate and the unemployment rates, we see the points seem to follow a similar pattern of decline after 2010.
 
 
@@ -1426,11 +1472,34 @@ Our main findings:
 kable(sumtab)
 ```
 
+
 **What kinds of crime?** 
 
 Misdemeanors make up nearly 60% of all crimes, with Felonies numbering 30%. Violations make up the remaining 10%.
 
 Two categories of Larceny wind up in the top five; Petit (16%) and Grand (8%) make up nearly a quarter of all crimes. Assault (10%) and Dangerous Drugs (6%) fit within our focus on Violent and Drug Crimes.
+
+
+```{r fig.height=4, fig_width = 6, echo=FALSE}
+  crime_top <- crime_df %>% 
+                  filter(OffenseDesc!="") %>%
+                  group_by(OffenseDesc) %>%
+                  summarize(count=n()) %>%
+                  mutate(rel_freq = count/sum(count)) %>%
+                  top_n(n=15, wt=count)
+
+  ggplot(crime_top, aes(reorder(OffenseDesc,rel_freq), rel_freq)) +
+    geom_col() + 
+    coord_flip() +
+    xlab("Offense Category") +
+    ylab("Crime Count Frequency") +
+    ggtitle(" Top Crime Offense Categories") + 
+    theme_gray(14) + scale_color_colorblind()
+    
+  
+  
+
+```
 
 **Where does crime take place?** 
 
@@ -1444,6 +1513,25 @@ Crime has been decreasing, in general, over the past ten years. We found that Fe
 
 There’s more crime in summer months, and less in winter. Fewer crimes between 5am and 7am, more during lunchtime, drive time. Certain types of crime (loitering, intoxication) happen around bar-closing hours.
 
+```{r echo=FALSE}
+
+crime_stat <- crime_df %>%
+                  filter(year(DateStart)>2005 & Level != "") %>%
+                  group_by(Date=floor_date(DateStart,"year"),Level) %>%
+                  summarize(count=n()) %>% 
+                  ungroup() %>%
+                  group_by(Level) %>%
+                  mutate(rel_count = count*100/count[1])
+
+ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
+    geom_line() +
+    ggtitle("Trend of Crime Categories over the years") +
+    ylab("Crime Rate") +
+    xlab("Time ( Years)") + 
+    theme_gray(14) + scale_color_colorblind()
+    
+```
+
 **Why does crime happen? What contributes?**
 
 The weather impacts crime! There’s more crime when it is hotter, especially misdemeanors. There’s less crime when it rains. Violent Crimes happen more often when it is hot, less often when rainy. Dangerous Drug crimes are less affected by the heat, but do happen less often with rain.
@@ -1451,7 +1539,16 @@ The weather impacts crime! There’s more crime when it is hotter, especially mi
 The phase of the moon has no impact on crime. None.
 
 Unemployment, particularly after 2009, seems to correlate with crime.
+```{r echo=FALSE, fig.width=16, fig.height=10}
 
+ggplot(temp_summary_arr, aes(group=1)) + geom_step(aes(x=Pct, y=Hot, color="Hot Days"), size=1) + 
+  geom_step(aes(x=Pct, y=Cold, color="Cold Days"), size=1) + 
+  scale_color_manual(name = "Temperature", values = cols) + 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(x= "Precinct", y = "Average Number of Crimes per Day") +
+  ggtitle("Average crimes per Day on Hot/Cold Days") +
+    theme_gray(14) + scale_color_colorblind()
+```
 
 ### <span style="color:darkblue">Interactive Component </span>
 
@@ -1474,7 +1571,32 @@ All maps are interactive, such that the user can pan and zoom as needed.
 Under the “Summary” Tab, the user will have the option to generate summary statistics for a range of dates they are interested in.  The horizontal bar chart on the right shows the total crime incidents reported over the selected date range and allows the user to break up the categories with a primary and secondary variable selection.  As the user mouses over each bar, a pop-up will display the number of crime incidents in that section.  Below the user input section on the left side panel is a summary table showing the data plotted in the right main panel.
 
 
-### <span style="color:darkblue"> Conclusion </span>
+### <span style="color:darkblue"> Conclusion </span>  
+
+**Limitations:**  
+
+* Time: there are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
+* Brevity: We could have had twice as many graphs, as this data was pretty rich and nuanced, and our explorations took multiple directions and multiple techniques for visualizing the data  
+* Technical issues:
++ Size of the dataset made it difficult to run in a free ShinyApp    
++ Different browsers resulted in different response from the ShinyApp
+
+**Future Directions:** 
+* Testing more hypotheses with other data sets  
+* Stop and Frisk  
+* More economic indicators  
+* Deeper dive on sociological measures and testing against Violent Crime and Drugs  
+* Converting sets of graphs into interactive graphs, possibly through D3
+
+**Lessons Learned**   
+* Didn’t take full advantage of github to coordinate works from group members, a lot of merging were done manually. Need to get more familiar with how github can help to merging contribution from team members.  
+* Teaming with 5 part-time people from different time zones and with only online meeting required more coordination
+
+
+**Disagreements:**  
+* Had disagreement on whether we should use a pie chart or not  
+* Had disagreement on whether we should change the column names of the dataset 
+
 
 
 
