@@ -1156,7 +1156,7 @@ pie3 <- ggplot(data = dg_moon_total_crime, aes(x="", y = Total_Count, fill = pha
 grid.arrange(pie1,pie2,pie3)
 ```
 
-<span style="color:grey>*Graph note: We debated (hotly) about using Pie Charts for this data. On the one hand, a bar chart would be at least equally capable of demonstrating the lack of difference, the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and we were inspired by the shape of the moon!*</span>
+<span style="color:grey">*Graph note: We debated (hotly) about using Pie Charts for this data. On the one hand, a bar chart would be at least equally capable of demonstrating the lack of difference, the phase of the moon has on crime. On the other hand, we felt like we had about a thousand bar charts, and we were inspired by the shape of the moon!*</span>
 
 We can see from the data that crime does not appear to be affected significantly on days with a full moon.  We can conclude that there is no statistical evidence to support the "old wives tale" about lunatics.
 
@@ -1188,23 +1188,29 @@ crime_e_df <- merge(x=crime_e_df,y=UnEmployment_data,by.x="year",by.y="year")
 ### Relationship between max temp and crime volume
 ## set up the data by day and Level
 crime_e_df <-crime_e_df %>% group_by(year) %>% summarize(CrimeCount=sum(CntByYear),AnnAvg,unEmpCrimeRatio =((AnnAvg)/sum(CntByYear)))
+ggplot(crime_e_df, aes(x=AnnAvg, y=CrimeCount)) + geom_point() +
+  labs(x = "Average Annual Unemployment", y = "Total Annual Crime Incidents", title = "Effect of Unempolyment on Crime") +
+  ggrepel::geom_text_repel(aes(label=year), size=3)
 
-require(gridExtra)
-x1 =ggplot(crime_e_df, aes(x=year,y=AnnAvg)) +
-  geom_point( alpha=0.3)+ xlab("Year")
-ylab("Annual Unemployment")
- 
-x2=  ggplot(crime_e_df, aes(x=year,y=CrimeCount)) +
-  geom_point( alpha=0.3)+xlab("Year") +
-ylab(" Yearly Crime count ")
- 
-
-
-grid.arrange(x1,x2)
-ggplot(crime_e_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")
+#require(gridExtra)
+#x1 =ggplot(crime_e_df, aes(x=year,y=AnnAvg)) +
+#  geom_point( alpha=0.3)+ xlab("Year")
+#ylab("Annual Unemployment")
+# 
+#x2=  ggplot(crime_e_df, aes(x=year,y=CrimeCount)) +
+#  geom_point( alpha=0.3)+xlab("Year") +
+#ylab(" Yearly Crime count ")
+# 
+#
+#
+#grid.arrange(x1,x2)
+#ggplot(crime_e_df,aes(x=CrimeCount,y=AnnAvg))+geom_point(alpha=0.3)+ylab(" Average yearly Unemployment ")
  
 
 ```
+
+Upon visual inspection of the annual crime rate and the unemployment rates on a scatter plot, we find no direct effect of Unemployment on crime rate.
+**check below **
 
 Upon visual inspection of the annual crime rate and the unemployment rates, we see the points seem to follow a similar pattern of decline after 2010.
 
@@ -1324,6 +1330,12 @@ Our main findings:
 
 
 ```{r echo=FALSE}
+
+#kable(sumtab,"html", caption="Violent Crimes and Dangerous Drugs are subcategories of the Felony, Misdemeanor and Violation categories shown. Each Borough’s Felony, Misdemeanor and Violation figures add to 100%") %>%
+  #kable_styling(full_width = F, position = "float_right”) %>%
+  #group_rows(“Violent Crimes and Drugs”, 4, 5)
+  
+  
 kable(sumtab,"html") %>%
     kable_styling( full_width = F) %>%
     row_spec(4:5, italic = T, background = "#DCD0C0") %>%
@@ -1340,7 +1352,7 @@ Misdemeanors make up nearly 60% of all crimes, with Felonies numbering 30%. Viol
 Two categories of Larceny wind up in the top five; Petit (16%) and Grand (8%) make up nearly a quarter of all crimes. Assault (10%) and Dangerous Drugs (6%) fit within our focus on Violent and Drug Crimes.
 
 
-```{r fig.height=4, fig_width = 6, echo=FALSE}
+```{r echo=FALSE}
   crime_top <- crime_df %>% 
                   filter(OffenseDesc!="") %>%
                   group_by(OffenseDesc) %>%
@@ -1354,7 +1366,12 @@ Two categories of Larceny wind up in the top five; Petit (16%) and Grand (8%) ma
     xlab("Offense Category") +
     ylab("Crime Count Frequency") +
     ggtitle(" Top Crime Offense Categories") + 
-    theme_gray(14) + scale_color_colorblind()
+    theme_gray(14) +
+    scale_color_colorblind() + 
+    labs(caption="These subcategories give clearer description of what kinds of crime are most frequent") +
+    theme(legend.position = "bottom",
+        plot.margin = margin(15, 15, 15, 15),
+        plot.caption = element_text(size = 11, family = "Garamond", color = "darkgrey", face = "italic"))
     
   
   
@@ -1388,7 +1405,13 @@ ggplot(crime_stat, aes(Date,rel_count,color=Level)) +
     ggtitle("Trend of Crime Categories over the years") +
     ylab("Crime Rate") +
     xlab("Time ( Years)") + 
-    theme_gray(14) + scale_color_colorblind()
+    theme_gray(14) + 
+    scale_color_colorblind()  +  
+    labs(caption="Misdemeanors and Felonies both end up more than 12% lower than 2006, with Felonies dropping first") +
+    theme(legend.position = "bottom",
+        plot.margin = margin(15, 15, 15, 15),
+        plot.caption = element_text(size = 10.5,family = "Garamond", color = "darkgrey", face = "italic"))
+  
     
 ```
 
@@ -1406,45 +1429,50 @@ ggplot(tidy_crime_w, aes(HotCold, CrimeCount)) +
   geom_boxplot()+
   labs(x="Cold days (under 20°) vs. Hot days (over 90°)", y="Count of Crimes") +
   ggtitle("Weather Impact on Crime") +
-  theme_gray(14) + scale_color_colorblind()
+  labs(caption="The number of crimes on Hot days is clearly higher than on Cold days") +
+  theme_gray(14) + scale_color_colorblind() + 
+  theme(legend.position = "bottom",
+        plot.margin = margin(15, 15, 15, 15),
+        plot.caption = element_text(size = 11, hjust = 0.5, family = "Garamond", color = "darkgrey", face = "italic"))
 ```
 
 The phase of the moon has no impact on crime. *None.*
 
-Unemployment, particularly after 2009, seems to correlate with crime.
+** Correct this line ** -> Unemployment, particularly after 2009, seems to correlate with crime.
 
 
 
 ### <span style="color:darkblue">Interactive Component </b></span>
 
+#### Shiny Based Interactive App    
+
+* Overview:   
 Our goal with the interactive application was to give the user the ability to explore both spatial relationships as well as summary statistics relating to our dataset on NYC crime.  The application was developed using the Shiny application development environment provided in R-studio.
-
-
-#### Overview:  
-
 Application URL -> https://nycrimeanalysis.shinyapps.io/CrimeDataNYCApp/
-There are two tabs for the user to select.  The user input selections on the left side panel change depending on which tab the user selects.
- 
-#### Maps Tab:   
-The first tab, labeled “Maps” provides the user with the option to select a specific date and borough of interest.  If the user would like to consider all five boroughs, that is also an option.  The application will filter the dataset based on the user’s selections and render an interactive map, the type of which is determined by the user’s selection under the “Select Map Type” pull down menu.  
+There are two tabs for the user to select.  The user input selections on the left side panel change depending on which tab the user selects.  
 
-In addition, below the user input selections on the left side panel, a word cloud is displayed indicating the relative frequency of different offense descriptions.
+* Maps Tab:    
+The first tab, labeled “Maps” provides the user with the option to select a specific date and borough of interest.  If the user would like to consider all five boroughs, that is also an option.  The application will filter the dataset based on the user’s selections and render an interactive map, the type of which is determined by the user’s selection under the “Select Map Type” pull down menu.    
+In addition, below the user input selections on the left side panel, a word cloud is displayed indicating the relative frequency of different offense descriptions.  
+If “Point” is selected, the user can view the locations of every crime incident that occurred on that day.  Clusters of crimes are grouped together with a label indicating the number of incidents in that cluster.  As the user zooms in or clicks on clusters the individual crime incidents become visible.  As the user mouses over the point a tooltip popup will display the level of the crime, the precinct it occurred in, and a brief description of the offense.  
+If “Density” is selected, the user will see a two-dimensional density plot of the crimes that occurred on that day.  This allows the user to identify areas of the city with the highest density and lowest density of crime.  
+If “Precincts” is selected, the user will see a static display of the geographic outlines for all 77 police precincts.  As the user mouses over each polygon, a tooltip pop up will display the precinct number.  
+All maps are interactive, such that the user can pan and zoom as needed.  
 
-If “Point” is selected, the user can view the locations of every crime incident that occurred on that day.  Clusters of crimes are grouped together with a label indicating the number of incidents in that cluster.  As the user zooms in or clicks on clusters the individual crime incidents become visible.  As the user mouses over the point a tooltip popup will display the level of the crime, the precinct it occurred in, and a brief description of the offense.
+* Summary Tab:  
+Under the “Summary” Tab, the user will have the option to generate summary statistics for a range of dates they are interested in.  The horizontal bar chart on the right shows the total crime incidents reported over the selected date range and allows the user to break up the categories with a primary and secondary variable selection.  As the user mouses over each bar, a pop-up will display the number of crime incidents in that section.  Below the user input section on the left side panel is a summary table showing the data plotted in the right main panel.  
 
-If “Density” is selected, the user will see a two-dimensional density plot of the crimes that occurred on that day.  This allows the user to identify areas of the city with the highest density and lowest density of crime.
 
-If “Precincts” is selected, the user will see a static display of the geographic outlines for all 77 police precincts.  As the user mouses over each polygon, a tooltip pop up will display the precinct number.
+#### D3 Based Interactive App    
 
-All maps are interactive, such that the user can pan and zoom as needed.
+* Overview  
+This app provides a basic interactive feature to compare Borough Crime density across different categories like Felony, Misdemeanor and Violations. The app displays the crime density in a mosaic plot implementation. The interactive suport allows the user to choose either 2010 and 2016, and switch between the respective mosaic plots. The crime density values and borough information across each cell is displayed when the user hovers over each of them.  
 
-#### Summary Tab:  
-Under the “Summary” Tab, the user will have the option to generate summary statistics for a range of dates they are interested in.  The horizontal bar chart on the right shows the total crime incidents reported over the selected date range and allows the user to break up the categories with a primary and secondary variable selection.  As the user mouses over each bar, a pop-up will display the number of crime incidents in that section.  Below the user input section on the left side panel is a summary table showing the data plotted in the right main panel.
 
 
 ### <span style="color:darkblue"> <b>Conclusion </b></span>  
 
-All our current work and analysis done in this project can be found in our Project repository in Github -> https://github.com/Columbia-CVN-STAT5702/CrimeDataNYC
+All our current work and analysis done in this project can be found in our Project repository on Github -> https://github.com/Columbia-CVN-STAT5702/CrimeDataNYC
 
 ####**Limitations:**  
 
@@ -1473,7 +1501,7 @@ All our current work and analysis done in this project can be found in our Proje
 
 * We debated whether we should use a pie chart or not  
 * We debated if we should change the column names of the dataset   
-* We debated to remove our detailed Detailed Data Quality Analysis   
+* We debated to remove most of our detailed Data Quality Analysis section   
 
 
 
