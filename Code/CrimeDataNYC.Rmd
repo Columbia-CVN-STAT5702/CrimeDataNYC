@@ -1444,6 +1444,8 @@ Under the “Summary” Tab, the user will have the option to generate summary s
 
 ### <span style="color:darkblue"> <b>Conclusion </b></span>  
 
+All our current work and analysis done in this project can be found in our Project repository in Github -> https://github.com/Columbia-CVN-STAT5702/CrimeDataNYC
+
 ####**Limitations:**  
 
 * **Time**: There are seemingly endless avenues we could explore, and directions we could go. We aspired to change a set of two graphs into an interactive D3 visualization of 4 to 6 graphs. We also aspired to bring in more and more datasets to test more hypotheses, such as, “did the stop-and-frisk” policy influence crime? We simply ran out of time.  
@@ -1459,6 +1461,7 @@ Under the “Summary” Tab, the user will have the option to generate summary s
     + More economic indicators  
 * Deeper dive on sociological measures and testing against Violent Crime and Drugs  
 * Converting sets of graphs into interactive graphs, possibly through D3
+* Create our own Project Website from Github 
 
 ####**Lessons Learned**   
 
