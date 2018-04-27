@@ -1339,6 +1339,7 @@ Our main findings:
 kable(sumtab,"html") %>%
     kable_styling( full_width = F) %>%
     row_spec(4:5, italic = T, background = "#DCD0C0") %>%
+    caption()
     footnote( general = " ",
               symbol = c("Above Table is auto-generated from the Crime Dataset directly")
            )
@@ -1468,6 +1469,7 @@ Under the “Summary” Tab, the user will have the option to generate summary s
 * Overview  
 This app provides a basic interactive feature to compare Borough Crime density across different categories like Felony, Misdemeanor and Violations. The app displays the crime density in a mosaic plot implementation. The interactive suport allows the user to choose either 2010 and 2016, and switch between the respective mosaic plots. The crime density values and borough information across each cell is displayed when the user hovers over each of them.  
 
+Application URL -> https://bl.ocks.org/CrimeDataNyc/raw/e3362fde2a5f94aa2fa94a524742a566/0fd5a0ec59e3c563d46e770b6141535bdbe5d98f/
 
 
 ### <span style="color:darkblue"> <b>Conclusion </b></span>  
