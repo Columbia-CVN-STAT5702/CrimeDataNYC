@@ -572,7 +572,7 @@ We also found that there are some notable differences between Boroughs in the Pe
 
 We can also get more specific about the top 6 types of crime, in terms of crime in the Boroughs.  
 
-```{r fig.height=5, fig.width=10}
+```{r fig.height=5, fig.width=14}
   top_ofns   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEF & RELATED OF", "ASSAULT 3 & RELATED OFFENSES", "GRAND LARCENY", "DANGEROUS DRUGS")
   label_list   <- c("PETIT LARCENY", "HARRASSMENT 2", "CRIMINAL MISCHIEFF", "ASSAULT 3" , "GRAND LARCENY", "DANGEROUS DRUGS")
  
@@ -585,7 +585,7 @@ We can also get more specific about the top 6 types of crime, in terms of crime 
   
   crime_sort$OffenseDesc <- factor(crime_sort$OffenseDesc)
   
-  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,3.3), offset_varnames = c(1,0,0,7.6), just_labels=c("left", "left", "left", "center")), crime_sort)
+  mosaic(OffenseDesc~Boro, main ="Top Offense Distribution across Boroughs", direction=c("v"), labeling=labeling_border(rot_labels=c(15,0,0, 0), offset_labels = c(0,0,0,6.5), offset_varnames = c(1,0,0,11.6), just_labels=c("left", "left", "left", "center")), crime_sort)
   
 ```  
 
@@ -1194,7 +1194,8 @@ ggplot(crime_e_df, aes(x=AnnAvg, y=CrimeCount)) + geom_point() +
   ggrepel::geom_text_repel(aes(label=year), size=3)
 ```
 
-It is really tempting to ignore 2006-2008, the three dots in the upper left corner, and conclude a somewhat linear relationship where you see less crime with lower unemployment. However, with only 11 data points, discarding thre as outliers may be unwise. We had a small debate on the team and settled it with a linear model that showed a p-value of 0.45. So no, we would need many more data points consistent with the 2010 to 2016 pattern to reject the null hypothesis here. 
+It is really tempting to ignore 2006-2008, the three dots in the upper left corner, and conclude a somewhat linear relationship where you see less crime with lower unemployment. However, with only 11 data points, discarding three as outliers may be unwise. We had a small debate on the team and settled it with a linear model that showed a p-value of 0.45. So no, we would need many more data points consistent with the 2010 to 2016 pattern to conclude there is a relationship.  
+
 
 
 ```{r echo=FALSE}
@@ -1317,7 +1318,7 @@ kable(sumtab,"html",caption="Crime by Borough, Level of Crime proportions") %>%
     footnote( general = " ",
               number = c("Above Table is auto-generated from the Crime Dataset directly",
                          "Violent Crimes and Dangerous Drugs are subcategories of the Felony, Misdemeanor and Violation categories shown",
-                         "Each Borough’s Felony, Misdemeanor and Violation figures add to 100%")
+                         "Felony, Misdemeanor and Violation figures of each Borough add up to 100%")
            )
 ```
 
