@@ -1497,7 +1497,7 @@ All our current work and analysis done in this project can be found in our Proje
 * We debated to remove most of our detailed Data Quality Analysis section   
 
 And with that, we submit this project.
-- Anita, Brent, Jinbo, Rashmi and Rich
+- Anita, Brent, Jingbo, Rashmi and Rich
 
 :)
 
