@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>NYC Crime Data - D3 App</title>
+    <title>NYC Crime capital vs Population evalution</title>
     <style>
 
 body {
@@ -29,12 +29,13 @@ svg {
   <body>
 <div>
     <h2> Please choose the year below to view the mosaic distribution of crime population density</h2>
+    
+    <input  id="borocount"  type="radio" name="stack" value="east" checked="true" style="font-weight: bold;font-size: 16px ;margin-right:3px">Total Crime by Borough</input> 
 
     <input  id="2010" type="radio" name="stack" value="north" style="font-weight: bold;font-size: 16px ;margin-right:3px;">2010 Per Capita (Census)</input>
 
     <input  id="2016"  type="radio" name="stack" value="east" style="font-weight: bold;font-size: 16px ;margin-right:3px">2016 Per Capita (Estimate)</input> 
 
-    <input  id="borocount"  type="radio" name="stack" value="east" style="font-weight: bold;font-size: 16px ;margin-right:3px">Total Crime by Borough</input> 
   <br/>
   <br/>
   <em id="msgHover" style ="font-size: 14px; margin-bottom: :15px;"> hover over the blocks to view the details </em>
@@ -83,9 +84,19 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + 2 * margin + "," + margin + ")");
 
     //var pathlnk= "mosaicdata.json";
-   var pathlnk="2010.json"
+   //var pathlnk="2010.json"
   
     var flg ="%";
+
+    var pathlnk="BoroughCrimeCount.json";
+          // alert(0);
+
+      d3.json(pathlnk, function(error, data) {
+            if (error) throw error;
+
+              flg= ""; 
+              plotChart(data,flg);
+            });
 
 d3.select("[id='2016']").on("click", function () {
 
