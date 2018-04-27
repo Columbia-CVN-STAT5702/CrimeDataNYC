@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<!-- saved from url=(0076)http://localhost:8000/Desktop/Exploratory%20DataAnalysis/D3/MosiacPlots.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Q1 Part B</title>
+    <style>
+
+body {
+  margin-left:150px;
+  font: 10px sans-serif;
+  position: centre;
+}
+
+.center-div
+{
+  position: absolute;
+  margin: auto;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  background-color: #ccc;
+  border-radius: 3px;
+}
+
+rect {
+  stroke: #000;
+}
+
+svg {
+  shape-rendering: crispEdges;
+}
+
+</style>
+    <script src="./Q1 Part B_files/d3.v4.min.js">  </script>
+
+  </head>
+  <body>
+<div>
+    <h2> Please choose the year below to view the mosaic distribution of crime population density</h2>
+
+    <input id="2010" type="radio" name="stack" value="north" style="font-size: 20px;">2010 <br>
+    <input id="2016" type="radio" name="stack" value="east">2016 <br>
+
+  <em> hober over the blocks to view the details </em>
+  <div>
+<!-- 
+  <em> hober over the blocks to view the details </em>
+ <h2 id="2010">2010</h2> <div id="2016">2016</div> -->
+
+    <script type="text/javascript">
+
+
+var width = 850,
+    height = 550,
+    margin = 70;
+ 
+var x = d3.scaleLinear()
+    .range([0, width - 3 * margin]);
+
+var y = d3.scaleLinear()
+
+     .range([0, height - 2 * margin]);
+
+
+// var y = d3.scaleBand()
+//       .domain(["FELONY","MISDEMEANOR","VIOLATION")
+//     .range([0, height - 2 * margin]);
+
+ var z = d3.scaleOrdinal(d3.schemeCategory20);
+
+// var colorRange = d3.scale.category20();
+// var z = d3.scaleOrdinal()
+//     .range(colorRange.range());
+
+console.log(z);
+
+var n = d3.format(",d"),
+    p = d3.format("%");
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + 2 * margin + "," + margin + ")");
+
+    //var pathlnk= "mosaicdata.json";
+   var pathlnk="2010.json"
+  
+
+    d3.select("[id='2016']").on("click", function () {
+
+    pathlnk="2016.json";
+    //alert("6");
+
+
+d3.json(pathlnk, function(error, data) {
+  if (error) throw error;
+
+  var offset = 0;
+
+  d3.select("svg").remove(); 
+var svg = d3.select("body").append("svg").attr("width","960").attr("height", "600"),
+inner = svg.append("g").attr("transform", "translate(" + 2 * margin + "," + margin + ")");
+
+  // Nest values by Level. We assume each Level+Boro is unique.
+  var Levels = d3.nest()
+      .key(function(d) { return d.Level; })
+      .entries(data);
+
+  // Compute the total sum, the per-Level sum, and the per-Boro offset.
+  // You can use reduce rather than reduceRight to reverse the ordering.
+  // We also record a reference to the parent Level for each Boro.
+  var sum = Levels.reduce(function(v, p) {
+    return (p.offset = v) + (p.sum = p.values.reduceRight(function(v, d) {
+      d.parent = p;
+      return (d.offset = v) + d.value;
+    }, 0));
+  }, 0);
+
+  // Add x-axis ticks.
+  var xtick = svg.selectAll(".x")
+      //.data(x.ticks(10))
+    .enter().append("g")
+      .attr("class", "x")
+      .attr("transform", function(d) { return "translate(" + x(d) + "," + y(1) + ")"; });
+
+  xtick.append("line")
+      .attr("y2", 6)
+      .style("stroke", "#000");
+
+  xtick.append("text")
+      .attr("y", 8)
+      .attr("text-anchor", "middle")
+      .attr("dy", ".71em")
+      .text(p);
+
+  // Add y-axis ticks.
+  var ytick = svg.selectAll(".y")
+      //.data(y.ticks(10))
+    .enter().append("g")
+      .attr("class", "y")
+      .attr("transform", function(d) { return "translate(0," + y(1 - d) + ")"; });
+
+  ytick.append("line")
+      .attr("x1", -6)
+      .style("stroke", "#000");
+
+  ytick.append("text")
+      .attr("x", -8)
+      .attr("text-anchor", "end")
+      .attr("dy", ".35em")
+      .text(p);
+
+  // Add a group for each Level.
+  var Levels = svg.selectAll(".Level")
+      .data(Levels)
+    .enter().append("g")
+      .attr("class", "Level")
+      .attr("xlink:title", function(d) { return d.key; })
+      .attr("transform", function(d) { return "translate(" + x(d.offset / sum) + ")"; });
+
+  // Add a rect for each Boro.
+  var Boros = Levels.selectAll(".Boro")
+      .data(function(d) { return d.values; })
+    .enter().append("a")
+      .attr("class", "Boro")
+      .attr("xlink:title", function(d) { return d.Boro + " " + d.parent.key + ": " + n(d.value*100)+"%"; })
+    .append("rect")
+      .attr("y", function(d) { return y(d.offset / d.parent.sum); })
+      .attr("height", function(d) { return y(d.value / d.parent.sum)-10; })
+      .attr("width", function(d) { return x(d.parent.sum / sum) -10 ; })
+      .style("fill", function(d) { return z(d.Boro); });
+
+       //Boros.exit().remove();
+});
+
+    });
+
+     d3.select("[id='2010']").on("click", function () {
+
+    pathlnk="2010.json";
+    // alert(0);
+
+
+d3.json(pathlnk, function(error, data) {
+  if (error) throw error;
+
+  var offset = 0;
+
+d3.select("svg").remove(); 
+var svg = d3.select("body").append("svg").attr("width","960").attr("height", "600"),
+inner = svg.append("g");
+
+  // Nest values by Level. We assume each Level+Boro is unique.
+  var Levels = d3.nest()
+      .key(function(d) { return d.Level; })
+      .entries(data);
+
+  // Compute the total sum, the per-Level sum, and the per-Boro offset.
+  // You can use reduce rather than reduceRight to reverse the ordering.
+  // We also record a reference to the parent Level for each Boro.
+  var sum = Levels.reduce(function(v, p) {
+    return (p.offset = v) + (p.sum = p.values.reduceRight(function(v, d) {
+      d.parent = p;
+      return (d.offset = v) + d.value;
+    }, 0));
+  }, 0);
+
+  // Add x-axis ticks.
+  var xtick = svg.selectAll(".x")
+      //.data(x.ticks(10))
+    .enter().append("g")
+      .attr("class", "x")
+      .attr("transform", function(d) { return "translate(" + x(d) + "," + y(1) + ")"; });
+
+  xtick.append("line")
+      .attr("y2", 6)
+      .style("stroke", "#000");
+
+  xtick.append("text")
+      .attr("y", 8)
+      .attr("text-anchor", "middle")
+      .attr("dy", ".71em")
+      .text(p);
+
+  // Add y-axis ticks.
+  var ytick = svg.selectAll(".y")
+     // .data(y.ticks(10))
+    .enter().append("g")
+      .attr("class", "y")
+      .attr("transform", function(d) { return "translate(0," + y(1 - d) + ")"; });
+
+  ytick.append("line")
+      .attr("x1", -6)
+      .style("stroke", "#000");
+
+  ytick.append("text")
+      .attr("x", -8)
+      .attr("text-anchor", "end")
+      .attr("dy", ".35em")
+      .text(p);
+
+  // Add a group for each Level.
+  var Levels = svg.selectAll(".Level")
+      .data(Levels)
+    .enter().append("g")
+      .attr("class", "Level")
+      .attr("xlink:title", function(d) { return d.key; })
+      .attr("transform", function(d) { return "translate(" + x(d.offset / sum) + ")"; });
+
+  // Add a rect for each Boro.
+  var Boros = Levels.selectAll(".Boro")
+      .data(function(d) { return d.values; })
+    .enter().append("a")
+      .attr("class", "Boro")
+      .attr("xlink:title", function(d) { return d.Boro + " " + d.parent.key + ": " + n(d.value*100)+"%"; })
+    .append("rect")
+      .attr("y", function(d) { return y(d.offset / d.parent.sum); })
+      .attr("height", function(d) { return y(d.value / d.parent.sum)-10; })
+      .attr("width", function(d) { return x(d.parent.sum / sum)-10; })
+      .style("fill", function(d) { return z(d.Boro); });
+
+      //Boros.exit.remove();
+});
+
+    });
+
+
+
+</script>
+
+
+
+
+    
+  
+
+</div></div><svg width="960" height="600"><g></g><g class="Level" title="FELONY" transform="translate(0)"><a class="Boro" title="BRONX FELONY: 2%"><rect y="313.72509243126365" height="86.27490756873631" width="165.46499070256377" style="fill: rgb(31, 119, 180);"></rect></a><a class="Boro" title="BROOKLYN FELONY: 2%"><rect y="225.88437168561114" height="77.84072074565256" width="165.46499070256377" style="fill: rgb(174, 199, 232);"></rect></a><a class="Boro" title="MANHATTAN FELONY: 2%"><rect y="116.85974390747951" height="99.02462777813166" width="165.46499070256377" style="fill: rgb(255, 127, 14);"></rect></a><a class="Boro" title="QUEENS FELONY: 1%"><rect y="48.47380389001962" height="58.3859400174599" width="165.46499070256377" style="fill: rgb(255, 187, 120);"></rect></a><a class="Boro" title="STATEN ISLAND FELONY: 1%"><rect y="0" height="38.47380389001962" width="165.46499070256377" style="fill: rgb(44, 160, 44);"></rect></a></g><g class="Level" title="MISDEMEANOR" transform="translate(175.46499070256377)"><a class="Boro" title="BRONX MISDEMEANOR: 5%"><rect y="298.1423889170797" height="101.85761108292029" width="375.9617255841023" style="fill: rgb(31, 119, 180);"></rect></a><a class="Boro" title="BROOKLYN MISDEMEANOR: 4%"><rect y="221.6591416161459" height="66.48324730093384" width="375.9617255841023" style="fill: rgb(174, 199, 232);"></rect></a><a class="Boro" title="MANHATTAN MISDEMEANOR: 5%"><rect y="121.82290591435985" height="89.83623570178605" width="375.9617255841023" style="fill: rgb(255, 127, 14);"></rect></a><a class="Boro" title="QUEENS MISDEMEANOR: 2%"><rect y="68.32866734035834" height="43.494238574001535" width="375.9617255841023" style="fill: rgb(255, 187, 120);"></rect></a><a class="Boro" title="STATEN ISLAND MISDEMEANOR: 3%"><rect y="0" height="58.328667340358336" width="375.9617255841023" style="fill: rgb(44, 160, 44);"></rect></a></g><g class="Level" title="VIOLATION" transform="translate(561.426716286666)"><a class="Boro" title="BRONX VIOLATION: 1%"><rect y="314.5956100380639" height="85.40438996193612" width="68.57328371333404" style="fill: rgb(31, 119, 180);"></rect></a><a class="Boro" title="BROOKLYN VIOLATION: 1%"><rect y="240.6508393632233" height="63.9447706748406" width="68.57328371333404" style="fill: rgb(174, 199, 232);"></rect></a><a class="Boro" title="MANHATTAN VIOLATION: 1%"><rect y="159.96816010235406" height="70.68267926086924" width="68.57328371333404" style="fill: rgb(255, 127, 14);"></rect></a><a class="Boro" title="QUEENS VIOLATION: 1%"><rect y="102.15687663684584" height="47.81128346550823" width="68.57328371333404" style="fill: rgb(255, 187, 120);"></rect></a><a class="Boro" title="STATEN ISLAND VIOLATION: 1%"><rect y="0" height="92.15687663684584" width="68.57328371333404" style="fill: rgb(44, 160, 44);"></rect></a></g></svg></body></html>
