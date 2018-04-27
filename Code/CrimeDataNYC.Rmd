@@ -23,29 +23,6 @@ knitr::opts_chunk$set(warning = FALSE,
 
 
 
-```{r echo=FALSE}
-library(zoo)
-library(vcd)
-library(dplyr)
-library(tidyr)
-library(tibble)
-library(lattice)
-library(ggplot2)
-library(forcats)
-library(extracat)
-library(vcdExtra)
-library(gridExtra)
-library(tidyverse)
-library(data.table)
-
-library(lubridate)
-library(RColorBrewer)
-library(knitr)
-library(ggthemes)
-
-library(kableExtra)
-
-```
 
 
 ### <span style="color:darkblue">Introduction</b></span>
@@ -102,6 +79,28 @@ We downloaded the data for our own analysis on March 5, 2018. The data is update
 We used the following commands to import and arrange the data for analysis:
 
 ```{r results ="hide"}
+
+library(zoo)
+library(vcd)
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(lattice)
+library(ggplot2)
+library(forcats)
+library(extracat)
+library(vcdExtra)
+library(gridExtra)
+library(tidyverse)
+library(data.table)
+
+library(lubridate)
+library(RColorBrewer)
+library(knitr)
+library(ggthemes)
+
+library(kableExtra)
+
 var_names <- c("Id", "DateStart", "TimeStart", "DateEnd", "TimeEnd", "DateReport", "ClassCode", "OffenseDesc", 
                "IntClassCode", "IntOffenseDesc", "AtptCptdStatus", "Level", "Jurisdiction", "Boro", "Pct", "LocOfOccr", "PremDesc", "ParkName", "HousingDevName", "XCoord", "YCoord", "Lat", "Long", "Lat_Long")
 
@@ -131,7 +130,11 @@ https://www.somacon.com/p570.php
 https://data.cityofnewyork.us/Public-Safety/Police-Precincts/78dh-3ptz/data
 
 * Weather Data  
-https://www.ncdc.noaa.gov/
+https://www.ncdc.noaa.gov/  
+
+* NY Unemployment Data   
+https://labor.ny.gov/stats/LSLAUS.shtm
+
 
 
 
@@ -473,6 +476,25 @@ The first thing we can see is that there is more crime in Brooklyn than any othe
 We can look at both Level and Time, comparing 2010 Per Capita to 2016 Per Capita.  
 
 ```{r fig.height=6, fig.width=8}
+
+# bring in Borough Population and massage it
+bdf <- fread("../Data_Files/BoroughPop.csv")
+bdf <- bdf[1:6,]
+bdf$Boro <- c("TOTAL","BRONX","BROOKLYN","MANHATTAN","QUEENS","STATEN ISLAND")
+
+# summarize for mosaic, per capita plots
+df_bsum <-crime_df %>% 
+  filter(!is.na(Boro)) %>%
+  group_by(Boro,Level) %>% 
+  summarize(Freq = n())
+
+# merge in the borough population
+df_bsum <- merge(df_bsum, bdf, by="Boro")
+
+# per capita calculation
+df_bsum$PerCap <-df_bsum$Freq/df_bsum$`2016 Estimate`
+
+
 #need to rename the bdf Boro in order to make the merge work
 colnames(bdf)[colnames(bdf)=="Boro"] <- "Boro"
 
